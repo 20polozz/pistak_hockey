@@ -242,8 +242,7 @@ final backupServiceProvider = Provider<BackupService>((ref) => BackupService(
       appName: currentBrand.appName,
     ));
 
-/// "1.0.0 (1)" from the installed package.
-final appVersionProvider = FutureProvider<String>((ref) async {
-  final info = await PackageInfo.fromPlatform();
-  return '${info.version} (${info.buildNumber})';
-});
+/// "1.0.0" from the installed package (the build number differs per CPU
+/// type in split APKs, so it isn't shown).
+final appVersionProvider = FutureProvider<String>(
+    (ref) async => (await PackageInfo.fromPlatform()).version);

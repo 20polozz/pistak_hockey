@@ -26,5 +26,5 @@ String reportFileName(String title, DateTime date, String ext) {
       .replaceAll(RegExp(r'[\\/:*?"<>|]'), '')
       .replaceAll(RegExp(r'\s+'), '_')
       .trim();
-  return 'PISTAK_${base.isEmpty ? 'match' : base}_$day.$ext';
+  return 'pistak_${base.isEmpty ? 'match' : base}_$day.$ext';
 }

@@ -98,7 +98,7 @@ class SettingsScreen extends ConsumerWidget {
                         l.appVersion(
                             ref.watch(appVersionProvider).valueOrNull ?? '…'),
                         style: const TextStyle(color: PistakColors.textMuted)),
-                    Text('${l.tagline} ${l.savedLocally}',
+                    Text(l.savedLocally,
                         style: const TextStyle(color: PistakColors.textMuted)),
                   ],
                 ),

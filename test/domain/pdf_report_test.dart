@@ -92,6 +92,6 @@ void main() {
 
   test('report file names are safe', () {
     expect(reportFileName('CP A / HC: B', DateTime(2026, 10, 12), 'pdf'),
-        'PISTAK_CP_A_HC_B_2026-10-12.pdf');
+        'pistak_CP_A_HC_B_2026-10-12.pdf');
   });
 }

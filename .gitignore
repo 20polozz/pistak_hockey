@@ -35,3 +35,6 @@ secrets/
 # Local build runner
 .runner/
 .e2e_profile/
+
+# Release signing key backup (never commit / never share)
+CLAU_SIGNATURA_NO_COMPARTIR/

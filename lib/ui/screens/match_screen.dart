@@ -92,7 +92,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         actions: [
-          SyncBadge(compact: MediaQuery.sizeOf(context).width < 600),
+          if (isBackendConfigured)
+            SyncBadge(compact: MediaQuery.sizeOf(context).width < 600),
           IconButton(
             tooltip: l.timeline,
             icon: const Icon(Icons.timeline),

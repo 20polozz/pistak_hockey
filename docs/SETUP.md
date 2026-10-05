@@ -127,6 +127,18 @@ La clau de publicació és teva: si es perd, no es pot actualitzar l'app. No la 
 5. Recomanat: activar *Play App Signing* a la Play Console (Google guarda la clau final i tu només
    la clau de pujada).
 
+## 9. Repartir l'APK (Telegram, WhatsApp…)
+
+- Clau: ja creada (`android/app/upload-keystore.jks` + `android/key.properties`, ignorats per git).
+  Còpia de seguretat a `CLAU_SIGNATURA_NO_COMPARTIR/` (també ignorada): guarda-la en un USB/núvol.
+- Compilar: acció del runner `apkfinal` → `build/app/outputs/flutter-apk/`:
+  - `app-arm64-v8a-release.apk` (~21 MB): el que has de compartir (mòbils dels últims ~8 anys).
+  - `app-armeabi-v7a-release.apk` (~19 MB): mòbils molt antics de 32 bits.
+- Cada versió nova: puja `version:` a `pubspec.yaml` (p. ex. 1.0.1+2) abans de compilar.
+- Comprovat a l'emulador: instal·lar la nova per sobre conserva tots els partits.
+- Nota: a Windows, `flutter test` de tant en tant mata el procés d'un fitxer de test
+  ("did not complete" / "Connection closed"). Torna'l a executar sol; no és un error de l'app.
+
 ## Anàlisi estàtica
 
 ```bash

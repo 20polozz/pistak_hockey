@@ -69,7 +69,7 @@ class PdfReportExporter {
       .replaceAll(RegExp(r'[^\u0000-ÿ]'), '');
 
   Future<Uint8List> build(MatchReport report, ReportLabels l) async {
-    final doc = pw.Document(title: safe(l.title), creator: 'PISTAK');
+    final doc = pw.Document(title: safe(l.title), creator: 'pistak. hockey');
     final s = report.state;
     final bold = const pw.TextStyle(fontWeight: pw.FontWeight.bold);
 
@@ -93,7 +93,7 @@ class PdfReportExporter {
         child: pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('PISTAK',
+            pw.Text('pistak.',
                 style: const pw.TextStyle(
                     fontSize: 18,
                     fontWeight: pw.FontWeight.bold,
