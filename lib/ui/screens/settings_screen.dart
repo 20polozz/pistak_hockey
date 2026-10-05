@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers.dart';
+import '../widgets/storage_banner.dart';
 import 'account_screen.dart';
 import 'categories_screen.dart';
 
@@ -68,6 +69,7 @@ class SettingsScreen extends ConsumerWidget {
                     builder: (_) => const CategoriesScreen())),
               ),
               const Divider(),
+              const StorageInfoTile(),
               ListTile(
                 title: Text(l.deviceId),
                 subtitle: SelectableText(ref.watch(deviceIdProvider)),

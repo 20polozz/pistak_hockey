@@ -10,6 +10,7 @@ import '../../domain/sport/sports.dart';
 import '../../domain/team/team.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers.dart';
+import '../widgets/storage_banner.dart';
 import '../widgets/event_labels.dart';
 import '../widgets/sync_badge.dart';
 import 'match_details_screen.dart';
@@ -49,6 +50,7 @@ class HomeScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              const StorageBanner(),
               if (active != null) ...[
                 _ActiveMatchCard(match: active),
                 const SizedBox(height: 16),
