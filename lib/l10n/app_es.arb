@@ -233,6 +233,7 @@
   "scheduledFor": "Programado · {date}",
   "statusScheduled": "Programado",
   "copyCsv": "Copiar CSV al portapapeles",
+  "sportName": "HOCKEY PATINES",
   "storageVolatile": "Este navegador no puede guardar datos de forma permanente (¿modo privado?). Lo que registres se PERDERÁ al cerrar la pestaña. Usa la app de Android o una ventana normal de Chrome/Edge/Firefox.",
   "storageMayBeEvicted": "El navegador puede borrar los datos locales si el dispositivo se queda sin espacio. Inicia sesión para tener copia en la nube, o instala la app.",
   "storageSection": "Almacenamiento en este dispositivo",

@@ -1,6 +1,6 @@
 {
-  "name": "PISTAK — Matchday made simple.",
-  "short_name": "PISTAK",
+  "name": "pistak. hockey",
+  "short_name": "pistak. hockey",
   "description": "Live match tracking for roller hockey. Works offline.",
   "start_url": ".",
   "scope": ".",

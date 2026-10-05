@@ -23,5 +23,10 @@ Future<void> loadRealFonts() async {
     }
   }
   await roboto.load();
+  final poppins = FontLoader('Poppins')
+    ..addFont(File('assets/fonts/Poppins-Bold.ttf')
+        .readAsBytes()
+        .then((b) => ByteData.sublistView(b)));
+  await poppins.load();
   await icons.load();
 }

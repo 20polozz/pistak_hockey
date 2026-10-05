@@ -233,6 +233,7 @@
   "scheduledFor": "Programat · {date}",
   "statusScheduled": "Programat",
   "copyCsv": "Copiar CSV al porta-retalls",
+  "sportName": "HOQUEI PATINS",
   "storageVolatile": "Aquest navegador no pot guardar dades de manera permanent (mode privat?). El que registris es PERDRÀ en tancar la pestanya. Fes servir l'app d'Android o una finestra normal de Chrome/Edge/Firefox.",
   "storageMayBeEvicted": "El navegador pot esborrar les dades locals si el dispositiu es queda sense espai. Inicia sessió per tenir-ne còpia al núvol, o instal·la l'app.",
   "storageSection": "Emmagatzematge en aquest dispositiu",

@@ -2,7 +2,7 @@
     <!-- Voice incidents (asked only when the user starts recording). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
-        android:label="PISTAK"
+        android:label="pistak. hockey"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

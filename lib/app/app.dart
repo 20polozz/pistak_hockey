@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import '../ui/providers.dart';
 import '../ui/screens/home_screen.dart';
 import '../ui/screens/onboarding_screen.dart';
+import 'sport_brand.dart';
 import 'theme.dart';
 
 class PistakApp extends ConsumerStatefulWidget {
@@ -52,7 +53,7 @@ class _PistakAppState extends ConsumerState<PistakApp> {
     });
     final code = ref.watch(localeCodeProvider);
     return MaterialApp(
-      title: 'PISTAK',
+      title: currentBrand.appName,
       debugShowCheckedModeBanner: false,
       theme: buildPistakTheme(),
       darkTheme: buildPistakTheme(),

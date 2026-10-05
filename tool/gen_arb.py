@@ -256,6 +256,7 @@ S = {
 'scheduledFor': ('Scheduled · {date}', 'Programat · {date}', 'Programado · {date}'),
 'statusScheduled': ('Scheduled', 'Programat', 'Programado'),
 'copyCsv': ('Copy CSV to clipboard', 'Copiar CSV al porta-retalls', 'Copiar CSV al portapapeles'),
+'sportName': ('ROLLER HOCKEY', 'HOQUEI PATINS', 'HOCKEY PATINES'),
 'storageVolatile': ('This browser cannot save data permanently (private mode?). What you record will be LOST when you close the tab. Use the Android app or a normal Chrome/Edge/Firefox window.', 'Aquest navegador no pot guardar dades de manera permanent (mode privat?). El que registris es PERDRÀ en tancar la pestanya. Fes servir l\'app d\'Android o una finestra normal de Chrome/Edge/Firefox.', 'Este navegador no puede guardar datos de forma permanente (¿modo privado?). Lo que registres se PERDERÁ al cerrar la pestaña. Usa la app de Android o una ventana normal de Chrome/Edge/Firefox.'),
 'storageMayBeEvicted': ('The browser may delete local data if the device runs out of space. Sign in to keep a copy in the cloud, or install the app.', 'El navegador pot esborrar les dades locals si el dispositiu es queda sense espai. Inicia sessió per tenir-ne còpia al núvol, o instal·la l\'app.', 'El navegador puede borrar los datos locales si el dispositivo se queda sin espacio. Inicia sesión para tener copia en la nube, o instala la app.'),
 'storageSection': ('Storage on this device', 'Emmagatzematge en aquest dispositiu', 'Almacenamiento en este dispositivo'),

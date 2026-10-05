@@ -10,6 +10,7 @@ import '../../domain/sport/sports.dart';
 import '../../domain/team/team.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers.dart';
+import '../widgets/brand.dart';
 import '../widgets/storage_banner.dart';
 import '../widgets/event_labels.dart';
 import '../widgets/sync_badge.dart';
@@ -32,11 +33,15 @@ class HomeScreen extends ConsumerWidget {
     final next = nextScheduledMatch(all, DateTime.now());
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('PISTAK',
-            style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 3)),
+        // Transparent over the sport image; solid once the list scrolls.
+        backgroundColor: WidgetStateColor.resolveWith((s) =>
+            s.contains(WidgetState.scrolledUnder)
+                ? PistakColors.background
+                : Colors.transparent),
         actions: [
-          const SyncBadge(),
+          if (isBackendConfigured) const SyncBadge(),
           IconButton(
             tooltip: l.settings,
             icon: const Icon(Icons.settings_outlined),
@@ -44,76 +49,86 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              const StorageBanner(),
-              if (active != null) ...[
-                _ActiveMatchCard(match: active),
-                const SizedBox(height: 16),
-              ],
-              if (next != null && next.id != active?.id) ...[
-                _NextMatchCard(match: next),
-                const SizedBox(height: 16),
-              ],
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(72)),
-                icon: const Icon(Icons.add_circle_outline, size: 28),
-                label: Text(l.newMatch, style: const TextStyle(fontSize: 20)),
-                onPressed: () => _newMatch(context, ref),
-              ),
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.groups_outlined),
-                    label: Text(l.myTeams),
-                    onPressed: () => _push(context, const TeamsScreen()),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.event_outlined),
-                    label: Text(l.scheduleMatch),
-                    onPressed: () => _schedule(context, ref),
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 28),
-              Row(children: [
-                Expanded(
-                  child: Text(l.myMatches,
-                      style: Theme.of(context).textTheme.titleLarge),
-                ),
-                Badge(
-                  isLabelVisible: !filter.isEmpty,
-                  backgroundColor: PistakColors.accent,
-                  child: IconButton(
-                    tooltip: l.filters,
-                    icon: const Icon(Icons.filter_list),
-                    onPressed: () => showModalBottomSheet<void>(
-                      context: context,
-                      isScrollControlled: true,
-                      showDragHandle: true,
-                      builder: (_) => FilterSheet(matches: all),
+      body: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          SportHeader(sportName: l.sportName),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const StorageBanner(),
+                    if (active != null) ...[
+                      _ActiveMatchCard(match: active),
+                      const SizedBox(height: 16),
+                    ],
+                    if (next != null && next.id != active?.id) ...[
+                      _NextMatchCard(match: next),
+                      const SizedBox(height: 16),
+                    ],
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(72)),
+                      icon: const Icon(Icons.add_circle_outline, size: 28),
+                      label: Text(l.newMatch,
+                          style: const TextStyle(fontSize: 20)),
+                      onPressed: () => _newMatch(context, ref),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.groups_outlined),
+                          label: Text(l.myTeams),
+                          onPressed: () => _push(context, const TeamsScreen()),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.event_outlined),
+                          label: Text(l.scheduleMatch),
+                          onPressed: () => _schedule(context, ref),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 28),
+                    Row(children: [
+                      Expanded(
+                        child: Text(l.myMatches,
+                            style: Theme.of(context).textTheme.titleLarge),
+                      ),
+                      Badge(
+                        isLabelVisible: !filter.isEmpty,
+                        backgroundColor: PistakColors.accent,
+                        child: IconButton(
+                          tooltip: l.filters,
+                          icon: const Icon(Icons.filter_list),
+                          onPressed: () => showModalBottomSheet<void>(
+                            context: context,
+                            isScrollControlled: true,
+                            showDragHandle: true,
+                            builder: (_) => FilterSheet(matches: all),
+                          ),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 4),
+                    ...matches.when<List<Widget>>(
+                      loading: () => [const LinearProgressIndicator()],
+                      error: (e, _) => [Text('$e')],
+                      data: (list) => _grouped(context, l, filter, list),
+                    ),
+                  ],
                 ),
-              ]),
-              const SizedBox(height: 4),
-              ...matches.when<List<Widget>>(
-                loading: () => [const LinearProgressIndicator()],
-                error: (e, _) => [Text('$e')],
-                data: (list) => _grouped(context, l, filter, list),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

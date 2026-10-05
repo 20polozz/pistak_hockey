@@ -23,9 +23,14 @@ $actions = @{
   'l10n'     = 'flutter gen-l10n'
   'analyze'  = 'flutter analyze'
   'format'   = 'dart format lib test'
-  'test'     = 'flutter test'
+  'test'     = 'flutter test --concurrency=1'
   'apk'      = 'flutter build apk --release'
   'aab'      = 'flutter build appbundle --release'
+  'apksplit' = 'flutter build apk --release --split-per-abi'
+  # Shareable APKs: one per CPU type, obfuscated (symbols kept locally for crash traces).
+  'apkfinal' = 'flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/symbols'
+  # Creates the release signing key ONCE (refuses to overwrite). See tool/windows/genkey.ps1.
+  'genkey'   = 'powershell -NoProfile -ExecutionPolicy Bypass -File tool\windows\genkey.ps1'
   'wearrelease' = 'cd wear_os && gradlew.bat bundleRelease --console=plain'
   'apkdebug' = 'flutter build apk --debug'
   'web'      = 'flutter build web --release --no-web-resources-cdn'
@@ -39,6 +44,7 @@ $actions = @{
   'screencap' = 'adb -s'
   'tap'       = 'adb -s'
   'launchapp' = 'adb -s'
+  'installsplit' = 'adb -s'
   'killemu'   = 'taskkill /F /IM qemu-system-x86_64.exe /T'
   'backendget'  = 'cd backend && dart pub get'
   'backendtest' = 'cd backend && dart test'
@@ -73,7 +79,7 @@ while ($true) {
   # Arguments of device actions: only ids / numbers, never free text.
   $okId = ($parts.Count -gt 1) -and ($parts[1] -match '^[A-Za-z0-9_.:-]+$')
   $okXY = ($parts.Count -gt 3) -and ($parts[2] -match '^[0-9]+$') -and ($parts[3] -match '^[0-9]+$')
-  if ($name -in @('launchemu','install','screencap','tap','launchapp') -and -not $okId) {
+  if ($name -in @('launchemu','install','screencap','tap','launchapp','installsplit') -and -not $okId) {
     Set-Content $log "Missing/invalid device or emulator id"; Set-Content $done '2'; continue
   }
   switch ($name) {
@@ -84,6 +90,8 @@ while ($true) {
     'tap'       { if (-not $okXY) { Set-Content $done '2'; continue }
                   $cmd = "`"$adb`" -s $($parts[1]) shell input tap $($parts[2]) $($parts[3])" }
     'launchapp' { $cmd = "`"$adb`" -s $($parts[1]) shell monkey -p cat.pistak.app -c android.intent.category.LAUNCHER 1" }
+    # Update in place (-r keeps the user's data): same path a real user follows.
+    'installsplit' { $cmd = "`"$adb`" -s $($parts[1]) install -r `"$root\build\app\outputs\flutter-apk\app-x86_64-release.apk`"" }
   }
   Write-Host "[$(Get-Date -Format HH:mm:ss)] $id : $cmd"
   cmd.exe /c "$cmd > `"$log`" 2>&1"

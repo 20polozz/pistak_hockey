@@ -39,4 +39,10 @@ flutter:
   uses-material-design: true
   assets:
     - assets/branding/
+    - assets/sports/
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
   generate: true

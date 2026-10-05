@@ -392,6 +392,7 @@
   },
   "statusScheduled": "Scheduled",
   "copyCsv": "Copy CSV to clipboard",
+  "sportName": "ROLLER HOCKEY",
   "storageVolatile": "This browser cannot save data permanently (private mode?). What you record will be LOST when you close the tab. Use the Android app or a normal Chrome/Edge/Firefox window.",
   "storageMayBeEvicted": "The browser may delete local data if the device runs out of space. Sign in to keep a copy in the cloud, or install the app.",
   "storageSection": "Storage on this device",
