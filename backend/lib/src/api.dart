@@ -7,6 +7,7 @@ import 'package:shelf_router/shelf_router.dart';
 
 import 'security.dart';
 import 'store.dart';
+import 'stt.dart';
 
 /// HTTP API:
 ///   GET  /health
@@ -17,6 +18,7 @@ import 'store.dart';
 ///   GET  /sync/pull?since=N                     (Bearer) → {KEY:[], cursor}
 ///   PUT  /audio/ID    raw bytes (Bearer)      → {ok}   (voice-incident audio)
 ///   GET  /audio/ID                  (Bearer)  → raw bytes
+///   POST /transcribe?lang=ca  raw audio (Bearer) → {text}   (503 if no STT configured)
 class PistakApi {
   PistakApi({
     required this.store,
@@ -25,6 +27,8 @@ class PistakApi {
     this.maxBatch = 500,
     this.allowedOrigins = const ['*'],
     this.maxAudioBytes = 25 * 1024 * 1024,
+    this.stt,
+    this.maxTranscriptionsPerHour = 120,
   }) : hasher = hasher ?? PasswordHasher();
 
   final Store store;
@@ -33,6 +37,9 @@ class PistakApi {
   final int maxBatch;
   final List<String> allowedOrigins;
   final int maxAudioBytes;
+  final SpeechToText? stt;
+  final int maxTranscriptionsPerHour;
+  final _sttUse = <String, List<DateTime>>{};
 
   /// JSON key in push/pull → document kind stored on the server.
   static const kinds = {
@@ -51,7 +58,9 @@ class PistakApi {
       .addHandler(_router.call);
 
   Router get _router => Router()
-    ..get('/health', (Request r) => _json({'ok': true, 'service': 'pistak'}))
+    ..get('/health',
+        (Request r) => _json({'ok': true, 'service': 'pistak', 'stt': stt != null}))
+    ..post('/transcribe', _transcribe)
     ..post('/auth/register', _register)
     ..post('/auth/login', _login)
     ..post('/sync/push', _push)
@@ -154,20 +163,54 @@ class PistakApi {
 
   static final _idRe = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
 
+  /// Reads a binary body; null if larger than [maxAudioBytes].
+  Future<Uint8List?> _bytes(Request r) async {
+    final len = r.contentLength;
+    if (len != null && len > maxAudioBytes) return null;
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in r.read()) {
+      builder.add(chunk);
+      if (builder.length > maxAudioBytes) return null;
+    }
+    return builder.takeBytes();
+  }
+
+  static String _mime(Request r) =>
+      (r.headers['content-type'] ?? 'application/octet-stream').split(';').first.trim();
+
+  Future<Response> _transcribe(Request r) async {
+    final uid = _user(r);
+    if (uid == null) return _json({'error': 'unauthorized'}, 401);
+    final provider = stt;
+    if (provider == null) return _json({'error': 'stt_not_configured'}, 503);
+    final cutoff = DateTime.now().subtract(const Duration(hours: 1));
+    final used = (_sttUse[uid] ??= [])..removeWhere((t) => t.isBefore(cutoff));
+    if (used.length >= maxTranscriptionsPerHour) {
+      return _json({'error': 'too_many_requests'}, 429);
+    }
+    final audio = await _bytes(r);
+    if (audio == null) return _json({'error': 'too_large'}, 413);
+    if (audio.isEmpty) return _json({'error': 'empty'}, 400);
+    used.add(DateTime.now());
+    try {
+      final text = await provider.transcribe(audio,
+          mimeType: _mime(r), language: r.url.queryParameters['lang']);
+      return _json({'text': text});
+    } on Object catch (e) {
+      // Audio is never stored or logged here; only the failure kind.
+      return _json({'error': 'stt_failed', 'detail': e is SttError ? e.message : 'error'}, 502);
+    }
+  }
+
   Future<Response> _putAudio(Request r, String id) async {
     final uid = _user(r);
     if (uid == null) return _json({'error': 'unauthorized'}, 401);
     if (!_idRe.hasMatch(id)) return _json({'error': 'bad_id'}, 400);
-    final len = r.contentLength;
-    if (len != null && len > maxAudioBytes) return _json({'error': 'too_large'}, 413);
-    final builder = BytesBuilder(copy: false);
-    await for (final chunk in r.read()) {
-      builder.add(chunk);
-      if (builder.length > maxAudioBytes) return _json({'error': 'too_large'}, 413);
-    }
-    if (builder.isEmpty) return _json({'error': 'empty'}, 400);
-    final mime = (r.headers['content-type'] ?? 'application/octet-stream').split(';').first.trim();
-    if (!store.putBlob(id, uid, mime, builder.takeBytes())) {
+    final bytes = await _bytes(r);
+    if (bytes == null) return _json({'error': 'too_large'}, 413);
+    if (bytes.isEmpty) return _json({'error': 'empty'}, 400);
+    final mime = _mime(r);
+    if (!store.putBlob(id, uid, mime, bytes)) {
       return _json({'error': 'forbidden'}, 403);
     }
     return _json({'ok': true});

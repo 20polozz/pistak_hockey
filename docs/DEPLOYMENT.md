@@ -63,6 +63,8 @@ location = /pistak_sw.js { add_header Cache-Control "no-cache"; }
 Vegeu `backend/README.md`: `Dockerfile` llest (binari AOT, usuari no-root, volum `/data`).
 1. Desplegar el contenidor amb HTTPS (Fly.io, Railway, Render, VPS + Caddy…).
 2. Variables: `PISTAK_JWT_SECRET` (≥32 caràcters, secret del proveïdor), `PISTAK_ORIGINS` (domini web).
+   Opcional, transcripció de veu: `PISTAK_STT_API_KEY` (+ `PISTAK_STT_URL`, `PISTAK_STT_MODEL` per a un
+   servei compatible amb OpenAI o un Whisper propi). La clau només viu al servidor.
 3. Compilar l'app amb `--dart-define=PISTAK_API_URL=https://…`.
 
 ## Checklist de release

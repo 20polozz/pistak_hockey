@@ -71,7 +71,7 @@ Dispositiu → SQLite (outbox: sync_status = pending) → SyncEngine → API HTT
 Test que ho demostra: `test/data/offline_sync_test.dart` (51 esdeveniments offline → tancar →
 reobrir → tall de connexió abans de l'ACK → resincronitzar → 0 duplicats, 0 pèrdues).
 
-## Àudio i transcripció (implementat a la Fase 1, excepte el servei STT)
+## Àudio i transcripció
 
 Implementació actual:
 - `AudioCaptureService` (paquet `record`): PCM 16 bits, 16 kHz, mono → WAV. Igual a Android i Web.
@@ -113,3 +113,8 @@ Si la transcripció falla, l'àudio continua existint. L'usuari pot esborrar àu
     els altres dispositius esborren la seva còpia.
   - Un canvi local pendent mai és sobreescrit pel remot (mateixa regla que partits/esdeveniments).
   - Test E2E amb el servidor real: `test/data/backend_e2e_test.dart`.
+
+### Servei de transcripció
+`HttpTranscriptionService` → `POST /transcribe?lang=<idioma>` del backend amb el token de l'usuari.
+Només amb compte (els convidats no envien res). 401/429/5xx/sense connexió → l'àudio queda pendent
+i es reintenta; 502 (el proveïdor ha fallat amb aquest àudio) compta com a intent fallit (5 → `failed`).

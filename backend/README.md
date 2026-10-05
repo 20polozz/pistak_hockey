@@ -51,6 +51,9 @@ Without `PISTAK_API_URL` the app hides accounts and works 100 % locally.
 | `PISTAK_DB` | no | `pistak.sqlite` |
 | `PORT` | no | `8080` |
 | `PISTAK_ORIGINS` | no | `*` (set your web domain in production) |
+| `PISTAK_STT_API_KEY` | no | enables `POST /transcribe` (voice incidents → text). Secret: provider env only |
+| `PISTAK_STT_URL` | no | OpenAI-compatible `/audio/transcriptions` URL (default OpenAI) |
+| `PISTAK_STT_MODEL` | no | default `whisper-1` |
 
 ## Deploy
 

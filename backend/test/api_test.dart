@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:pistak_server/pistak_server.dart';
 import 'package:shelf/shelf.dart';
@@ -162,4 +163,43 @@ void main() {
     });
     expect((await raw('GET', '/audio/a1', a)).statusCode, 404);
   });
+
+  test('transcription: disabled by default, works with a provider', () async {
+    final t = await register('stt@a.co');
+    Future<Response> post(Handler handler, String token, List<int> bytes) =>
+        Future.value(handler(Request('POST', Uri.parse('http://x/transcribe?lang=ca'),
+            body: bytes, headers: {'authorization': 'Bearer $token', 'content-type': 'audio/wav'})));
+    expect((await post(h, t, [1, 2, 3])).statusCode, 503);
+    expect((await call('GET', '/health')).$2['stt'], false);
+
+    final fake = _FakeStt();
+    final withStt = PistakApi(
+      store: SqliteStore(':memory:'),
+      jwt: Jwt('test-secret-test-secret-test-secret-123'),
+      hasher: PasswordHasher(iterations: 1000),
+      stt: fake,
+      maxTranscriptionsPerHour: 2,
+    ).handler;
+    final reg = await withStt(Request('POST', Uri.parse('http://x/auth/register'),
+        body: jsonEncode({'email': 's@s.co', 'password': 'correct horse'})));
+    final tok = (jsonDecode(await reg.readAsString()) as Map)['token'] as String;
+    expect((await post(withStt, tok, [9, 9])).statusCode, 200);
+    expect(fake.lastLanguage, 'ca');
+    expect(fake.lastMime, 'audio/wav');
+    final res = await post(withStt, tok, [7]);
+    expect(jsonDecode(await res.readAsString()), {'text': 'Falta dura al número 7'});
+    expect((await post(withStt, tok, [7])).statusCode, 429, reason: 'rate limited');
+    expect((await post(withStt, 'bad', [7])).statusCode, 401);
+  });
+}
+
+class _FakeStt implements SpeechToText {
+  String? lastLanguage;
+  String? lastMime;
+  @override
+  Future<String> transcribe(Uint8List audio, {required String mimeType, String? language}) async {
+    lastLanguage = language;
+    lastMime = mimeType;
+    return 'Falta dura al número 7';
+  }
 }

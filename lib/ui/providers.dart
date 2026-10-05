@@ -24,6 +24,7 @@ import '../domain/match/match_filter.dart';
 import '../domain/team/team.dart';
 import '../domain/sport/match_format.dart';
 import '../services/audio/audio_playback_service.dart';
+import '../services/transcription/http_transcription_service.dart';
 import '../services/transcription/transcription_queue.dart';
 import '../services/transcription/transcription_service.dart';
 import '../services/match_session_service.dart';
@@ -55,8 +56,16 @@ final audioRepositoryProvider = Provider<AudioRepository>((ref) =>
         clock: ref.watch(clockProvider)));
 
 /// Phase 4 replaces this with the backend Speech-to-Text client.
-final transcriptionServiceProvider =
-    Provider<TranscriptionService>((ref) => const NoTranscriptionService());
+/// Real Speech-to-Text when the app is built with a backend and the user is
+/// signed in; otherwise recordings simply stay pending (never lost).
+final transcriptionServiceProvider = Provider<TranscriptionService>((ref) {
+  final account = ref.watch(accountProvider);
+  if (!isBackendConfigured || account == null) {
+    return const NoTranscriptionService();
+  }
+  return HttpTranscriptionService(
+      baseUrl: apiBaseUrl, token: account.accessToken);
+});
 
 final transcriptionQueueProvider =
     Provider<TranscriptionQueue>((ref) => TranscriptionQueue(
