@@ -13,9 +13,19 @@ String eventLabel(AppLocalizations l, MatchEvent e) {
     case EventTypes.matchEnd:
       return l.evMatchEnd;
     case EventTypes.periodStart:
-      return l.evPeriodStart(e.period);
+      return e.period > _regular(e)
+          ? l.evOvertimeStart(e.period - _regular(e))
+          : l.evPeriodStart(e.period);
     case EventTypes.periodEnd:
-      return l.evPeriodEnd(e.period);
+      return e.period > _regular(e)
+          ? l.evOvertimeEnd(e.period - _regular(e))
+          : l.evPeriodEnd(e.period);
+    case EventTypes.shootoutStart:
+      return l.evShootoutStart;
+    case EventTypes.shootoutAttempt:
+      return e.subtype == ShootoutResults.scored
+          ? l.evPenaltyScored
+          : l.evPenaltyMissed;
     case EventTypes.breakStart:
       return l.evBreak;
     case EventTypes.clockPause:
@@ -51,6 +61,10 @@ String eventLabel(AppLocalizations l, MatchEvent e) {
       return l.evUnknown;
   }
 }
+
+/// Number of regulation periods, stored on period events by the factory
+/// (metadata 'regular'); 2 when unknown.
+int _regular(MatchEvent e) => (e.metadata[MetaKeys.regularPeriods] as num?)?.toInt() ?? 2;
 
 String teamName(AppLocalizations l, MatchInfo info, TeamSide side) {
   final name = side == TeamSide.home ? info.homeName : info.awayName;
@@ -95,6 +109,13 @@ Color cardColor(String? color) => switch (color) {
       );
     case EventTypes.timeoutEnd:
       return (teamColor(e.team), Icons.timer_off_outlined);
+    case EventTypes.shootoutAttempt:
+      return (
+        teamColor(e.team),
+        e.subtype == ShootoutResults.scored
+            ? Icons.check_circle_outline
+            : Icons.cancel_outlined
+      );
     case EventTypes.clockPause:
       return (PistakColors.textMuted, Icons.pause_circle_outline);
     case EventTypes.clockResume:

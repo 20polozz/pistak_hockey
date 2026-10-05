@@ -113,7 +113,16 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       TextEditingController(text: '${base.timeoutDuration.inSeconds}');
   late final _toPer =
       TextEditingController(text: '${base.timeoutsPerTeamPerPeriod}');
+  late final _excl =
+      TextEditingController(text: '${base.exclusionDuration.inMinutes}');
+  late final _foulLimit =
+      TextEditingController(text: '${base.foulLimit ?? 0}');
+  late final _otPeriods =
+      TextEditingController(text: '${base.overtimePeriods}');
+  late final _otMinutes =
+      TextEditingController(text: '${base.overtimeDuration.inMinutes}');
   late bool _stop = base.stopClockOnTimeout;
+  late bool _shootout = base.allowShootout;
   String? _error;
 
   @override
@@ -153,6 +162,16 @@ class _CategoryDialogState extends State<_CategoryDialog> {
               value: _stop,
               onChanged: (v) => setState(() => _stop = v),
             ),
+            num(_excl, l.formatExclusionMinutes),
+            num(_foulLimit, l.formatFoulLimit),
+            num(_otPeriods, l.formatOvertimePeriods),
+            num(_otMinutes, l.formatOvertimeMinutes),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l.formatAllowShootout),
+              value: _shootout,
+              onChanged: (v) => setState(() => _shootout = v),
+            ),
           ],
         ),
       ),
@@ -190,6 +209,15 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         timeoutsPerTeamPerPeriod:
             read(_toPer, base.timeoutsPerTeamPerPeriod, 0),
         stopClockOnTimeout: _stop,
+        exclusionDuration:
+            Duration(minutes: read(_excl, base.exclusionDuration.inMinutes, 0)),
+        foulLimit: read(_foulLimit, base.foulLimit ?? 0, 0) == 0
+            ? null
+            : read(_foulLimit, base.foulLimit ?? 0, 0),
+        overtimePeriods: read(_otPeriods, base.overtimePeriods, 0),
+        overtimeDuration:
+            Duration(minutes: read(_otMinutes, base.overtimeDuration.inMinutes, 1)),
+        allowShootout: _shootout,
       ),
     );
   }

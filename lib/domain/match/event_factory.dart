@@ -3,6 +3,9 @@ import '../../core/ids.dart';
 import 'match_event.dart';
 import 'match_state.dart';
 
+/// What happens after the last regulation (or overtime) period ends.
+enum PeriodEndChoice { endMatch, overtime, shootout }
+
 /// Turns user commands into events, using the current [MatchState] to stamp
 /// the exact match time and period.
 ///
@@ -36,7 +39,10 @@ class EventFactory {
     final a = _Action(this, now);
     return [
       a.event(EventTypes.matchStart, period: 1, matchTime: Duration.zero),
-      a.event(EventTypes.periodStart, period: 1, matchTime: Duration.zero),
+      a.event(EventTypes.periodStart,
+          period: 1,
+          matchTime: Duration.zero,
+          metadata: {MetaKeys.regularPeriods: s.format.periods}),
     ];
   }
 
@@ -52,31 +58,61 @@ class EventFactory {
     return [a.eventAt(s, EventTypes.clockResume)];
   }
 
-  /// Ends the current period. If it is the last one, also ends the match;
-  /// otherwise starts the break (Final 1a part → Descans).
-  List<MatchEvent> endPeriod(MatchState s) {
+  /// Ends the current period.
+  /// * More regulation periods left → break (Final 1a part → Descans).
+  /// * Last regulation/overtime period → [then]: end of match, break before
+  ///   overtime, or penalty shoot-out (only if the format allows it).
+  List<MatchEvent> endPeriod(MatchState s,
+      {PeriodEndChoice then = PeriodEndChoice.endMatch}) {
     if (!s.isInPlay) return const [];
     final a = _Action(this, clock.now());
-    final end = a.eventAt(s, EventTypes.periodEnd);
-    if (s.isLastPeriod) {
-      return [end, a.eventAt(s, EventTypes.matchEnd)];
+    final end = a.eventAt(s, EventTypes.periodEnd,
+        metadata: {MetaKeys.regularPeriods: s.format.periods});
+    if (s.hasMoreRegularPeriods) {
+      return [end, a.eventAt(s, EventTypes.breakStart)];
     }
-    return [end, a.eventAt(s, EventTypes.breakStart)];
+    switch (then) {
+      case PeriodEndChoice.overtime when s.canPlayOvertime:
+        return [end, a.eventAt(s, EventTypes.breakStart)];
+      case PeriodEndChoice.shootout when s.format.allowShootout:
+        return [end, a.eventAt(s, EventTypes.shootoutStart)];
+      default:
+        return [end, a.eventAt(s, EventTypes.matchEnd)];
+    }
   }
+
+  /// Starts the penalty shoot-out from a break / ended period.
+  List<MatchEvent> startShootout(MatchState s) {
+    if (!s.format.allowShootout) return const [];
+    if (s.phase != MatchPhase.onBreak && s.phase != MatchPhase.periodEnded) {
+      return const [];
+    }
+    return [_Action(this, clock.now()).eventAt(s, EventTypes.shootoutStart)];
+  }
+
+  /// One penalty of the shoot-out (recording: never rejected).
+  List<MatchEvent> shootoutAttempt(MatchState s, TeamSide team,
+          {required bool scored}) =>
+      [
+        _Action(this, clock.now()).eventAt(s, EventTypes.shootoutAttempt,
+            team: team,
+            subtype: scored ? ShootoutResults.scored : ShootoutResults.missed),
+      ];
 
   /// Starts the next period after a break.
   List<MatchEvent> startNextPeriod(MatchState s) {
     if (s.phase != MatchPhase.onBreak && s.phase != MatchPhase.periodEnded) {
       return const [];
     }
-    if (s.period >= s.format.periods) return const [];
+    if (!s.canPlayOvertime) return const [];
     final next = s.period + 1;
     final a = _Action(this, clock.now());
     return [
       a.event(
         EventTypes.periodStart,
         period: next,
-        matchTime: s.format.periodDuration * (next - 1),
+        matchTime: s.format.startOf(next),
+        metadata: {MetaKeys.regularPeriods: s.format.periods},
       ),
     ];
   }
@@ -87,7 +123,8 @@ class EventFactory {
     final a = _Action(this, clock.now());
     if (s.isInPlay) {
       return [
-        a.eventAt(s, EventTypes.periodEnd),
+        a.eventAt(s, EventTypes.periodEnd,
+        metadata: {MetaKeys.regularPeriods: s.format.periods}),
         a.eventAt(s, EventTypes.matchEnd, metadata: {MetaKeys.forced: true}),
       ];
     }
@@ -106,7 +143,7 @@ class EventFactory {
       a.event(
         EventTypes.clockAdjust,
         period: s.period,
-        matchTime: s.format.periodDuration * (s.period - 1) + periodElapsed,
+        matchTime: s.format.startOf(s.period) + periodElapsed,
         periodTime: periodElapsed,
         metadata: {MetaKeys.periodElapsedMs: periodElapsed.inMilliseconds},
       ),

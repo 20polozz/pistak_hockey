@@ -74,7 +74,14 @@ class MatchController {
   Future<List<MatchEvent>> startMatch() => _act((f, s) => f.startMatch(s));
   Future<List<MatchEvent>> pause() => _act((f, s) => f.pause(s));
   Future<List<MatchEvent>> resume() => _act((f, s) => f.resume(s));
-  Future<List<MatchEvent>> endPeriod() => _act((f, s) => f.endPeriod(s));
+  Future<List<MatchEvent>> endPeriod(
+          {PeriodEndChoice then = PeriodEndChoice.endMatch}) =>
+      _act((f, s) => f.endPeriod(s, then: then));
+  Future<List<MatchEvent>> startShootout() =>
+      _act((f, s) => f.startShootout(s));
+  Future<List<MatchEvent>> shootoutAttempt(TeamSide team,
+          {required bool scored}) =>
+      _act((f, s) => f.shootoutAttempt(s, team, scored: scored));
   Future<List<MatchEvent>> startNextPeriod() =>
       _act((f, s) => f.startNextPeriod(s));
   Future<List<MatchEvent>> endMatch() => _act((f, s) => f.endMatch(s));

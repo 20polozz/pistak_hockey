@@ -85,6 +85,7 @@ class MatchProjector {
       case EventTypes.periodEnd:
         if (s.phase == MatchPhase.running || s.phase == MatchPhase.paused) {
           if (s.phase == MatchPhase.running) _stopClock(s, ts);
+          s.completedPlayed += s.elapsedAnchor;
           s.phase = MatchPhase.periodEnded;
           s.periodEndedAt[s.period] = ts;
           s.activeTimeout = null;
@@ -107,6 +108,7 @@ class MatchProjector {
           if (s.phase == MatchPhase.running) _stopClock(s, ts);
           if (s.phase == MatchPhase.running || s.phase == MatchPhase.paused) {
             s.periodEndedAt[s.period] = ts;
+            s.completedPlayed += s.elapsedAnchor;
           }
           s.phase = MatchPhase.finished;
           s.matchEndedAt = ts;
@@ -139,6 +141,14 @@ class MatchProjector {
           final team = e.team;
           final map = team == null ? s.unassignedCards : s.tally(team).cards;
           map[color] = (map[color] ?? 0) + 1;
+          if (team != null && color == CardColors.blue && s.period > 0) {
+            s.exclusions.add(Exclusion(
+              team,
+              s.completedPlayed + s.periodElapsedAt(ts),
+              s.format.exclusionDuration,
+              e.id,
+            ));
+          }
         }
 
       case EventTypes.timeout:
@@ -160,6 +170,30 @@ class MatchProjector {
 
       case EventTypes.incident:
         s.incidents++;
+
+      case EventTypes.shootoutStart:
+        if (s.phase == MatchPhase.finished || s.phase == MatchPhase.shootout) {
+          s.anomalies.add('SHOOTOUT_START ignored in ${s.phase} ${e.id}');
+        } else {
+          if (s.phase == MatchPhase.running) _stopClock(s, ts);
+          if (s.isInPlay) {
+            s.periodEndedAt[s.period] = ts;
+            s.completedPlayed += s.elapsedAnchor;
+          }
+          s.phase = MatchPhase.shootout;
+          s.breakStartedAt = null;
+          s.activeTimeout = null;
+        }
+
+      case EventTypes.shootoutAttempt:
+        {
+          final team = e.team;
+          if (team != null) {
+            final t = s.tally(team);
+            t.shootoutAttempts++;
+            if (e.subtype == ShootoutResults.scored) t.shootoutScored++;
+          }
+        }
 
       default:
         // Unknown types (newer app version / other sport) are preserved in

@@ -33,6 +33,9 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
   final _breakMinutes = TextEditingController();
   final _timeoutSeconds = TextEditingController();
   final _timeoutsPerPeriod = TextEditingController();
+  final _foulLimit = TextEditingController();
+  final _otPeriods = TextEditingController();
+  bool _shootout = false;
   DateTime? _scheduledAt;
   late MatchFormat _format;
   bool _stopOnTimeout = true;
@@ -71,6 +74,9 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
     _timeoutSeconds.text = '${f.timeoutDuration.inSeconds}';
     _timeoutsPerPeriod.text = '${f.timeoutsPerTeamPerPeriod}';
     _stopOnTimeout = f.stopClockOnTimeout;
+    _foulLimit.text = '${f.foulLimit ?? 0}';
+    _otPeriods.text = '${f.overtimePeriods}';
+    _shootout = f.allowShootout;
   }
 
   @override
@@ -78,6 +84,7 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
     for (final c in [
       _home, _away, _category, _competition, _venue, _season, _notes,
       _periods, _minutes, _breakMinutes, _timeoutSeconds, _timeoutsPerPeriod,
+      _foulLimit, _otPeriods,
     ]) {
       c.dispose();
     }
@@ -236,6 +243,22 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
                     child: _numField(_timeoutsPerPeriod,
                         l.formatTimeoutsPerPeriod, locked)),
               ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                    child: _numField(_foulLimit, l.formatFoulLimit, locked)),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: _numField(
+                        _otPeriods, l.formatOvertimePeriods, locked)),
+              ]),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l.formatAllowShootout),
+                value: _shootout,
+                onChanged:
+                    locked ? null : (v) => setState(() => _shootout = v),
+              ),
             ],
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -272,6 +295,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
     final breakMin = read(_breakMinutes, _format.breakDuration.inMinutes, 0);
     final toSecs = read(_timeoutSeconds, _format.timeoutDuration.inSeconds, 1);
     final toPer = read(_timeoutsPerPeriod, _format.timeoutsPerTeamPerPeriod, 0);
+    final foulLimit = read(_foulLimit, _format.foulLimit ?? 0, 0);
+    final otPeriods = read(_otPeriods, _format.overtimePeriods, 0);
     return _format.copyWith(
       id: _customId,
       name: '$periods × $minutes min',
@@ -281,6 +306,10 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
       timeoutDuration: Duration(seconds: toSecs),
       timeoutsPerTeamPerPeriod: toPer,
       stopClockOnTimeout: _stopOnTimeout,
+      foulLimit: foulLimit == 0 ? null : foulLimit,
+      clearFoulLimit: foulLimit == 0,
+      overtimePeriods: otPeriods,
+      allowShootout: _shootout,
     );
   }
 

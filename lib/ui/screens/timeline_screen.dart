@@ -342,7 +342,7 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
     }
     // Keep periodTime consistent with the edited match time.
     final periodStart = e.period > 0
-        ? widget.view.info.format.periodDuration * (e.period - 1)
+        ? widget.view.info.format.startOf(e.period)
         : Duration.zero;
     final periodTime = time - periodStart;
     final updated = e.copyWith(

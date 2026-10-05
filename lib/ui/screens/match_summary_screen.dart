@@ -258,6 +258,10 @@ class MatchSummaryScreen extends ConsumerWidget {
             row(l.statRed, cards(s, TeamSide.home, CardColors.red),
                 cards(s, TeamSide.away, CardColors.red)),
             row(l.statTimeouts, s.home.timeouts, s.away.timeouts),
+            if (s.hadShootout)
+              row(l.statShootout, s.home.shootoutScored,
+                  s.away.shootoutScored,
+                  bold: true),
           ],
         ),
         const Divider(height: 24),

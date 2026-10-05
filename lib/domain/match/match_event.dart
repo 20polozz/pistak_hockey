@@ -16,6 +16,8 @@ abstract final class EventTypes {
   static const timeout = 'TIMEOUT';
   static const timeoutEnd = 'TIMEOUT_END';
   static const incident = 'INCIDENT';
+  static const shootoutStart = 'SHOOTOUT_START';
+  static const shootoutAttempt = 'SHOOTOUT_ATTEMPT';
 
   /// Events that change the clock / match phase.
   static const clockTypes = {
@@ -27,6 +29,7 @@ abstract final class EventTypes {
     clockPause,
     clockResume,
     clockAdjust,
+    shootoutStart,
   };
 }
 
@@ -34,6 +37,11 @@ abstract final class CardColors {
   static const yellow = 'yellow';
   static const blue = 'blue';
   static const red = 'red';
+}
+
+abstract final class ShootoutResults {
+  static const scored = 'scored';
+  static const missed = 'missed';
 }
 
 abstract final class IncidentKinds {
@@ -56,6 +64,7 @@ abstract final class MetaKeys {
   static const periodElapsedMs = 'periodElapsedMs';
   static const forced = 'forced';
   static const audioId = 'audioId';
+  static const regularPeriods = 'regular';
   static const transcriptStatus = 'transcriptStatus';
 }
 

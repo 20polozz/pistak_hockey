@@ -17,6 +17,9 @@ enum MatchPhase {
   /// Break between periods (e.g. half-time).
   onBreak,
 
+  /// Penalty shoot-out (after the last period).
+  shootout,
+
   /// Match finished.
   finished,
 }
@@ -29,12 +32,24 @@ class TeamTally {
   final Map<int, int> foulsByPeriod = {};
   final Map<int, int> timeoutsByPeriod = {};
   final Map<String, int> cards = {};
+  int shootoutScored = 0;
+  int shootoutAttempts = 0;
 
   int get fouls => foulsByPeriod.values.fold<int>(0, (a, b) => a + b);
   int get timeouts => timeoutsByPeriod.values.fold<int>(0, (a, b) => a + b);
   int foulsIn(int period) => foulsByPeriod[period] ?? 0;
   int timeoutsIn(int period) => timeoutsByPeriod[period] ?? 0;
   int cardsOf(String color) => cards[color] ?? 0;
+}
+
+/// A player excluded by a blue card. Counts PLAYED time (clock running),
+/// so pauses and breaks don't consume it.
+class Exclusion {
+  const Exclusion(this.team, this.startPlayed, this.duration, this.eventId);
+  final TeamSide team;
+  final Duration startPlayed;
+  final Duration duration;
+  final String eventId;
 }
 
 class ActiveTimeout {
@@ -60,6 +75,11 @@ class MatchState {
 
   /// Elapsed time in the current period at [runningSince] (or total if stopped).
   Duration elapsedAnchor = Duration.zero;
+
+  /// Clock-running time of the periods already finished.
+  Duration completedPlayed = Duration.zero;
+
+  final List<Exclusion> exclusions = [];
 
   /// When the clock started running (null if stopped).
   DateTime? runningSince;
@@ -92,7 +112,41 @@ class MatchState {
   bool get isFinished => phase == MatchPhase.finished;
   bool get isInPlay =>
       phase == MatchPhase.running || phase == MatchPhase.paused;
+  /// True from the last regulation period on (overtime included).
   bool get isLastPeriod => period >= format.periods;
+  bool get isOvertime => format.isOvertimePeriod(period);
+  bool get hasMoreRegularPeriods => period < format.periods;
+  bool get canPlayOvertime => period < format.totalPeriods;
+  bool get isShootout => phase == MatchPhase.shootout;
+  bool get hadShootout =>
+      home.shootoutAttempts + away.shootoutAttempts > 0 || isShootout;
+
+  /// Total clock-running time of the match at [now].
+  Duration playedAt(DateTime now) =>
+      period <= 0 ? Duration.zero : completedPlayed + periodElapsedAt(now);
+
+  /// Exclusions still running at [now], with their remaining time.
+  List<(Exclusion, Duration)> activeExclusionsAt(DateTime now, {TeamSide? team}) {
+    final played = playedAt(now);
+    return [
+      for (final x in exclusions)
+        if (team == null || x.team == team)
+          if (x.duration - (played - x.startPlayed) > Duration.zero)
+            (x, x.duration - (played - x.startPlayed)),
+    ];
+  }
+
+  /// Fouls of [team] in the current period reached the configured limit.
+  bool foulLimitReached(TeamSide team) {
+    final limit = format.foulLimit;
+    return limit != null && tally(team).foulsIn(period) >= limit;
+  }
+
+  /// One foul away from the limit.
+  bool foulLimitNear(TeamSide team) {
+    final limit = format.foulLimit;
+    return limit != null && tally(team).foulsIn(period) == limit - 1;
+  }
 
   int get totalCards =>
       home.cards.values.fold<int>(0, (a, b) => a + b) +
@@ -114,12 +168,12 @@ class MatchState {
   /// elapsed time in the current one (so the 2nd half starts at 25:00 in 2×25).
   Duration matchTimeAt(DateTime now) {
     if (period <= 0) return Duration.zero;
-    return format.periodDuration * (period - 1) + periodElapsedAt(now);
+    return format.startOf(period) + periodElapsedAt(now);
   }
 
   /// True if the current period has exceeded its nominal duration.
   bool isOvertimeAt(DateTime now) =>
-      period > 0 && periodElapsedAt(now) > format.periodDuration;
+      period > 0 && periodElapsedAt(now) > format.durationOf(period);
 
   /// Time spent on break so far.
   Duration? breakElapsedAt(DateTime now) {

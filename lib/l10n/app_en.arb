@@ -264,5 +264,85 @@
   "formatTimeoutSeconds": "Timeout (seconds)",
   "formatTimeoutsPerPeriod": "Timeouts per team and period",
   "builtInFormats": "Built-in formats",
+  "overtimeLabel": "OVERTIME {n}",
+  "@overtimeLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "shootoutLabel": "SHOOT-OUT",
+  "evOvertimeStart": "Start of overtime {n}",
+  "@evOvertimeStart": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "evOvertimeEnd": "End of overtime {n}",
+  "@evOvertimeEnd": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "evShootoutStart": "Penalty shoot-out starts",
+  "evPenaltyScored": "Penalty scored",
+  "evPenaltyMissed": "Penalty missed",
+  "penaltyScored": "SCORED",
+  "penaltyMissed": "MISSED",
+  "startOvertime": "START OVERTIME {n}",
+  "@startOvertime": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "endOvertime": "END OVERTIME {n}",
+  "@endOvertime": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "startShootout": "PENALTY SHOOT-OUT",
+  "chooseAfterPeriod": "How does the match continue?",
+  "optEndMatch": "End of match",
+  "optOvertime": "Overtime",
+  "optShootout": "Penalty shoot-out",
+  "shootoutScore": "({home}–{away} pen.)",
+  "@shootoutScore": {
+    "placeholders": {
+      "home": {
+        "type": "int"
+      },
+      "away": {
+        "type": "int"
+      }
+    }
+  },
+  "exclusionBanner": "Exclusion {team} · {time}",
+  "@exclusionBanner": {
+    "placeholders": {
+      "team": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "foulLimitReached": "Foul limit reached",
+  "formatExclusionMinutes": "Blue card exclusion (min)",
+  "formatFoulLimit": "Foul limit per period (0 = none)",
+  "formatOvertimePeriods": "Overtime periods",
+  "formatOvertimeMinutes": "Minutes per overtime",
+  "formatAllowShootout": "Penalty shoot-out allowed",
+  "statShootout": "Shoot-out",
   "savedLocally": "Saved on this device"
 }

@@ -33,6 +33,9 @@ const rollerHockey = SportDefinition(
       periods: 2,
       periodDuration: Duration(minutes: 25),
       breakDuration: Duration(minutes: 10),
+      foulLimit: 10,
+      overtimePeriods: 2,
+      allowShootout: true,
     ),
     MatchFormat(
       id: 'rh_2x20',
@@ -40,6 +43,9 @@ const rollerHockey = SportDefinition(
       periods: 2,
       periodDuration: Duration(minutes: 20),
       breakDuration: Duration(minutes: 10),
+      foulLimit: 10,
+      overtimePeriods: 2,
+      allowShootout: true,
     ),
     MatchFormat(
       id: 'rh_2x15',
@@ -47,6 +53,9 @@ const rollerHockey = SportDefinition(
       periods: 2,
       periodDuration: Duration(minutes: 15),
       breakDuration: Duration(minutes: 5),
+      foulLimit: 10,
+      overtimePeriods: 2,
+      allowShootout: true,
     ),
   ],
 );

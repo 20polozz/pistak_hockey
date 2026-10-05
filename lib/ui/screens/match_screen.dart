@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../core/time_format.dart';
+import '../../domain/match/event_factory.dart';
 import '../../domain/match/match_event.dart';
 import '../../domain/match/match_state.dart';
 import '../../domain/sport/sports.dart';
@@ -170,6 +171,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 
   Widget _grid(AppLocalizations l, MatchView v) {
     final s = v.state;
+    if (s.isShootout) return _shootoutPanel(l, v);
     final sport = Sports.byId(v.info.sport);
     final period = s.period < 1 ? 1 : s.period;
     final maxTo = s.format.timeoutsPerTeamPerPeriod;
@@ -280,6 +282,59 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     });
   }
 
+  /// Penalty shoot-out: one column per team, SCORED / MISSED.
+  Widget _shootoutPanel(AppLocalizations l, MatchView v) {
+    final s = v.state;
+    Widget column(TeamSide side) {
+      final t = s.tally(side);
+      final color = teamColor(side);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(teamName(l, v.info, side).toUpperCase(),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+          Text('${t.shootoutScored} / ${t.shootoutAttempts}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  fontFeatures: tabularFigures)),
+          const SizedBox(height: 8),
+          Expanded(
+            child: EventButton(
+              label: l.penaltyScored,
+              icon: Icons.check_circle_outline,
+              color: color,
+              filled: true,
+              onTap: () => _run((c) => c.shootoutAttempt(side, scored: true),
+                  heavy: true),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: EventButton(
+              label: l.penaltyMissed,
+              icon: Icons.cancel_outlined,
+              color: color,
+              onTap: () =>
+                  _run((c) => c.shootoutAttempt(side, scored: false)),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: column(TeamSide.home)),
+        const SizedBox(width: 8),
+        Expanded(child: column(TeamSide.away)),
+      ],
+    );
+  }
+
   String _cardLabel(AppLocalizations l, String color) => switch (color) {
         CardColors.yellow => l.cardYellow,
         CardColors.blue => l.cardBlue,
@@ -312,7 +367,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           child: Text(label, textAlign: TextAlign.center),
         );
 
-    final endLabel = s.isLastPeriod ? l.endMatch : l.endPeriod(s.period);
+    final endLabel = s.hasMoreRegularPeriods
+        ? l.endPeriod(s.period)
+        : s.isOvertime
+            ? l.endOvertime(s.period - s.format.periods)
+            : l.endMatch;
     void confirmEnd() => _confirmEndPeriod(l, s);
 
     switch (s.phase) {
@@ -340,10 +399,26 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         ]);
       case MatchPhase.periodEnded:
       case MatchPhase.onBreak:
-        if (s.period < s.format.periods) {
+        if (s.hasMoreRegularPeriods) {
           return primary(l.startPeriod(s.period + 1), Icons.play_arrow,
               () => _run((c) => c.startNextPeriod(), heavy: true));
         }
+        // After regulation: overtime and/or shoot-out if the format allows.
+        final next = s.canPlayOvertime
+            ? primary(l.startOvertime(s.period + 1 - s.format.periods),
+                Icons.play_arrow,
+                () => _run((c) => c.startNextPeriod(), heavy: true))
+            : primary(l.endMatch, Icons.flag, () => _confirmEndMatch(l));
+        if (!s.format.allowShootout) return next;
+        return Row(children: [
+          Expanded(flex: 3, child: next),
+          const SizedBox(width: 8),
+          Expanded(
+              flex: 2,
+              child: secondary(l.startShootout,
+                  () => _run((c) => c.startShootout(), heavy: true))),
+        ]);
+      case MatchPhase.shootout:
         return primary(l.endMatch, Icons.flag, () => _confirmEndMatch(l));
       case MatchPhase.finished:
         return primary(l.viewSummary, Icons.assessment_outlined,
@@ -437,9 +512,56 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   }
 
   Future<void> _confirmEndPeriod(AppLocalizations l, MatchState s) async {
-    final ok = await _confirm(
-        l, s.isLastPeriod ? l.confirmEndMatch : l.confirmEndPeriod(s.period));
-    if (ok) await _run((c) => c.endPeriod(), heavy: true);
+    if (s.hasMoreRegularPeriods) {
+      final ok = await _confirm(l, l.confirmEndPeriod(s.period));
+      if (ok) await _run((c) => c.endPeriod(), heavy: true);
+      return;
+    }
+    final canOvertime = s.canPlayOvertime;
+    final canShootout = s.format.allowShootout;
+    if (!canOvertime && !canShootout) {
+      final ok = await _confirm(l, l.confirmEndMatch);
+      if (ok) await _run((c) => c.endPeriod(), heavy: true);
+      return;
+    }
+    // Last period: the scorer decides (draw → overtime / penalties).
+    final choice = await showDialog<PeriodEndChoice>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(l.chooseAfterPeriod),
+        children: [
+          SimpleDialogOption(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            onPressed: () => Navigator.pop(ctx, PeriodEndChoice.endMatch),
+            child: Text(l.optEndMatch,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          if (canOvertime)
+            SimpleDialogOption(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              onPressed: () => Navigator.pop(ctx, PeriodEndChoice.overtime),
+              child: Text(l.optOvertime),
+            ),
+          if (canShootout)
+            SimpleDialogOption(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              onPressed: () => Navigator.pop(ctx, PeriodEndChoice.shootout),
+              child: Text(l.optShootout),
+            ),
+          SimpleDialogOption(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l.cancel,
+                style: const TextStyle(color: PistakColors.textMuted)),
+          ),
+        ],
+      ),
+    );
+    if (choice != null) {
+      await _run((c) => c.endPeriod(then: choice), heavy: true);
+    }
   }
 
   Future<void> _confirmEndMatch(AppLocalizations l) async {
@@ -650,7 +772,10 @@ class _Scoreboard extends StatelessWidget {
       MatchPhase.running ||
       MatchPhase.paused ||
       MatchPhase.periodEnded =>
-        l.periodLabel(s.period),
+        s.isOvertime
+            ? l.overtimeLabel(s.period - s.format.periods)
+            : l.periodLabel(s.period),
+      MatchPhase.shootout => l.shootoutLabel,
       MatchPhase.onBreak => l.breakLabel,
       MatchPhase.finished => l.finishedLabel,
     };
@@ -743,11 +868,65 @@ class _TeamScore extends StatelessWidget {
               fontWeight: FontWeight.w900,
               fontFeatures: tabularFigures),
         ),
-        Text(
-          '${l.foulsShort} ${t.foulsIn(period)} · ${l.timeoutsShort} ${t.timeoutsIn(period)}',
-          style: const TextStyle(fontSize: 12, color: PistakColors.textMuted),
+        if (s.hadShootout)
+          Text(l.shootoutScore(s.home.shootoutScored, s.away.shootoutScored),
+              style: const TextStyle(
+                  fontSize: 12, color: PistakColors.accent)),
+        _foulsLine(l, s, t, period),
+        // Blue-card exclusions: countdown of played time, never colour-only.
+        TickerBuilder(
+          interval: const Duration(milliseconds: 500),
+          builder: (context, now) {
+            final active = s.activeExclusionsAt(now, team: side);
+            if (active.isEmpty) return const SizedBox(height: 16);
+            return Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 4,
+              children: [
+                for (final (_, left) in active)
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: PistakColors.blueCard.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: PistakColors.blueCard),
+                    ),
+                    child: Text('⏱ ${formatMatchTime(left)}',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            fontFeatures: tabularFigures)),
+                  ),
+              ],
+            );
+          },
         ),
       ],
+    );
+  }
+
+  Widget _foulsLine(
+      AppLocalizations l, MatchState s, TeamTally t, int period) {
+    final limit = s.format.foulLimit;
+    final reached = s.foulLimitReached(side);
+    final near = s.foulLimitNear(side);
+    final fouls = limit == null
+        ? '${t.foulsIn(period)}'
+        : '${t.foulsIn(period)}/$limit';
+    return Text(
+      '${l.foulsShort} $fouls${reached ? ' ⚠' : ''} · ${l.timeoutsShort} ${t.timeoutsIn(period)}',
+      semanticsLabel: reached ? l.foulLimitReached : null,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: reached || near ? FontWeight.w800 : FontWeight.w400,
+        color: reached
+            ? PistakColors.danger
+            : near
+                ? PistakColors.warning
+                : PistakColors.textMuted,
+      ),
     );
   }
 }
