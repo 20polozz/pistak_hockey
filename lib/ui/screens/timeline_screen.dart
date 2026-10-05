@@ -69,13 +69,13 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
       appBar: AppBar(
         title: Text(l.timeline),
         actions: [
-          Row(children: [
-            Text(l.showVoided, style: const TextStyle(fontSize: 12)),
-            Switch(
-              value: _showVoided,
-              onChanged: (v) => setState(() => _showVoided = v),
-            ),
-          ]),
+          IconButton(
+            tooltip: l.showVoided,
+            isSelected: _showVoided,
+            icon: const Icon(Icons.visibility_off_outlined),
+            selectedIcon: const Icon(Icons.visibility),
+            onPressed: () => setState(() => _showVoided = !_showVoided),
+          ),
         ],
       ),
       body: view.when(

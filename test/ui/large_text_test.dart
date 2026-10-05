@@ -19,13 +19,19 @@ import 'real_fonts.dart';
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
-  setUpAll(loadRealFonts);
+  // One in-memory DB per file (creating one per widget test made the test
+  // process flaky on Windows).
+  late AppDatabase db;
+  setUpAll(() async {
+    await loadRealFonts();
+    db = AppDatabase(NativeDatabase.memory());
+  });
+  tearDownAll(() => db.close());
 
   for (final (w, h) in [(360.0, 640.0), (412.0, 915.0)]) {
     for (final scale in [1.0, 1.5, 2.0]) {
       testWidgets('match screen ${w.toInt()}x${h.toInt()} text x$scale',
           (tester) async {
-        final db = AppDatabase(NativeDatabase.memory());
         late String id;
         {
           final repo = DriftMatchRepository(db, deviceId: 'd');
@@ -71,9 +77,10 @@ void main() {
             reason: 'no overflow / layout error');
         expect(find.textContaining('GOL'), findsWidgets);
 
+        // Unmount; the in-memory DB is simply garbage-collected (closing it
+        // while widget streams wind down made the test isolate flaky).
         await tester.pumpWidget(const SizedBox());
         await tester.pump(const Duration(seconds: 1));
-        await db.close();
       }, timeout: const Timeout(Duration(seconds: 60)));
     }
   }

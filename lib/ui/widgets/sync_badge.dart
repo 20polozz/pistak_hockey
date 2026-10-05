@@ -56,6 +56,9 @@ class SyncBadge extends ConsumerWidget {
               l.syncNeedsLogin
             ),
         };
+        // Icon only when text is large: the app bar has little room.
+        final iconOnly =
+            compact || MediaQuery.textScalerOf(context).scale(10) > 13;
         return Tooltip(
           message: text,
           child: Padding(
@@ -63,8 +66,11 @@ class SyncBadge extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 18, color: color),
-                if (!compact) ...[
+                Icon(icon,
+                    size: 18,
+                    color: color,
+                    semanticLabel: iconOnly ? text : null),
+                if (!iconOnly) ...[
                   const SizedBox(width: 4),
                   Text(text, style: TextStyle(fontSize: 12, color: color)),
                 ],

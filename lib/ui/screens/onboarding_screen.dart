@@ -27,70 +27,84 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(flex: 2),
-                  Center(
-                    child: Image.asset('assets/branding/pistak_icon_1024.png',
-                        width: 96, height: 96),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'PISTAK',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 56,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 8,
-                        color: PistakColors.accent),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(l.tagline,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text(l.taglineSport,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: PistakColors.textMuted)),
-                  const Spacer(flex: 3),
-                  if (!_askLogin)
-                    FilledButton(
-                      onPressed: () => setState(() => _askLogin = true),
-                      child: Text(l.start),
-                    )
-                  else ...[
-                    Text(l.loginQuestion,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 16),
-                    OutlinedButton(
-                      onPressed: () async {
-                        if (!isBackendConfigured) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(l.accountsComingSoon)));
-                          return;
-                        }
-                        await Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                                builder: (_) => const AccountScreen()));
-                        if (ref.read(authServiceProvider).isSignedIn) {
-                          await _continue();
-                        }
-                      },
-                      child: Text(l.signIn),
+            // Scrolls when it doesn't fit (small screens, large text).
+            child: LayoutBuilder(
+              builder: (context, box) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: box.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Spacer(flex: 2),
+                          Center(
+                            child: Image.asset(
+                                'assets/branding/pistak_icon_1024.png',
+                                width: 96,
+                                height: 96),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'PISTAK',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 56,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 8,
+                                color: PistakColors.accent),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(l.tagline,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Text(l.taglineSport,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: PistakColors.textMuted)),
+                          const Spacer(flex: 3),
+                          if (!_askLogin)
+                            FilledButton(
+                              onPressed: () => setState(() => _askLogin = true),
+                              child: Text(l.start),
+                            )
+                          else ...[
+                            Text(l.loginQuestion,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.titleLarge),
+                            const SizedBox(height: 16),
+                            OutlinedButton(
+                              onPressed: () async {
+                                if (!isBackendConfigured) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text(l.accountsComingSoon)));
+                                  return;
+                                }
+                                await Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                        builder: (_) => const AccountScreen()));
+                                if (ref.read(authServiceProvider).isSignedIn) {
+                                  await _continue();
+                                }
+                              },
+                              child: Text(l.signIn),
+                            ),
+                            const SizedBox(height: 12),
+                            FilledButton(
+                              onPressed: _continue,
+                              child: Text(l.continueWithoutAccount),
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: _continue,
-                      child: Text(l.continueWithoutAccount),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                ],
+                  ),
+                ),
               ),
             ),
           ),

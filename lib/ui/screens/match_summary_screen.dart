@@ -215,11 +215,15 @@ class MatchSummaryScreen extends ConsumerWidget {
                     fontWeight: FontWeight.w800,
                     fontSize: 16)),
           ),
-          Text('${s.home.goals} – ${s.away.goals}',
-              style: const TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w900,
-                  fontFeatures: tabularFigures)),
+          // Already huge: grows at most 1.2× with the system text size.
+          MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.2,
+            child: Text('${s.home.goals} – ${s.away.goals}',
+                style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w900,
+                    fontFeatures: tabularFigures)),
+          ),
           Expanded(
             child: Text(teamName(l, v.info, TeamSide.away),
                 textAlign: TextAlign.center,

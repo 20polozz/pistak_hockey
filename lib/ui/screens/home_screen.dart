@@ -275,9 +275,11 @@ class _HighlightCard extends StatelessWidget {
               Icon(Icons.fiber_manual_record, color: dotColor, size: 14),
               const SizedBox(width: 6),
             ],
-            Text(header,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+            Flexible(
+              child: Text(header,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+            ),
           ]),
           const SizedBox(height: 8),
           Text(title,
