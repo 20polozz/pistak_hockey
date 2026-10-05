@@ -13,12 +13,14 @@ Arquitectura preparada per a altres esports de pista.
 
 | Fase | Contingut | Estat |
 |------|-----------|-------|
-| 1 — Core | Offline-first, partit sense títol, cronòmetre, esdeveniments, temps morts (inici/fi), incidències escrites i **de veu**, cronologia editable, desfer, autosave, recuperació, categories configurables, export CSV/JSON | ✅ Android + Web verificats (emulador i navegador), 44 tests en verd |
-| 2 — Comptes i núvol | Registre/login, equips i plantilles, partits programats, backend propi (Dart), sincronització push/pull multi-dispositiu, detecció de connexió | ✅ Fet i provat E2E amb servidor real (falta desplegar-lo a internet) |
+| 1 — Core | Offline-first, partit sense títol, cronòmetre, esdeveniments, temps morts (inici/fi), incidències escrites i **de veu**, cronologia editable, desfer, autosave, recuperació, categories configurables, export CSV/JSON | ✅ Android + Web verificats (emulador i navegador) |
+| 2 — Comptes i núvol | Registre/login, equips i plantilles, partits programats, backend propi (Dart), sincronització push/pull multi-dispositiu, detecció de connexió | ✅ Fet i provat E2E amb servidor real, inclosos equips, plantilles i àudios (falta desplegar-lo a internet) |
 | 3 — Informes | PDF, CSV, JSON, compartir/descarregar | ✅ Fet |
 | 4 — Àudio | Speech-to-Text real (backend) | Fet: `POST /transcribe` (proveïdor compatible OpenAI/Whisper, clau al servidor); s'activa amb `PISTAK_STT_API_KEY` |
 | 5 — Wear OS | App Kotlin al rellotge + pont al mòbil (idempotent) | Fet (compila, tests; pendent provar en rellotge real) |
 | 6 — Polish | Icona, splash, branding, accessibilitat | ✅ Icona/splash; ✅ text gran fins a 2× sense desbordar (tests 360×640); ✅ guies d'accessibilitat (mida de botons, etiquetes, contrast) |
+
+Tests: 103 de l'app + 14 del servidor, tots en verd.
 
 ## Plataformes
 
