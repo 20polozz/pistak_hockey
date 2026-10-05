@@ -11,8 +11,10 @@ added without touching the routes or the app).
 | GET | `/health` | – | liveness |
 | POST | `/auth/register` | – | `{email, password}` → `{token, userId, email}` (201) |
 | POST | `/auth/login` | – | `{email, password}` → `{token, userId, email}`; 10 failures/15 min → 429 |
-| POST | `/sync/push` | Bearer | `{matches:[…], events:[…]}` → `{accepted:{matches:{id:rev}, events:{id:rev}}, rejected:{id:reason}}` |
-| GET | `/sync/pull?since=N` | Bearer | changes of *this user* after server cursor N → `{matches, events, cursor}` |
+| POST | `/sync/push` | Bearer | `{matches, events, teams, members, audio: […]}` → `{accepted:{matches:{id:rev}, events:{id:rev}}, rejected:{id:reason}}` |
+| GET | `/sync/pull?since=N` | Bearer | changes of *this user* after server cursor N → `{matches, events, teams, members, audio, cursor}` |
+| PUT | `/audio/<id>` | Bearer | voice-incident audio bytes (≤ 25 MB, idempotent, owner-only) |
+| GET | `/audio/<id>` | Bearer | download those bytes (404 for other users) |
 
 ## Guarantees
 

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:sqlite3/sqlite3.dart';
 
@@ -23,13 +24,20 @@ abstract class Store {
   UserRecord? userByEmail(String email);
   UserRecord createUser(String id, String email, String passwordHash);
 
-  /// kind: 'match' | 'event'. Idempotent: same id + lower/equal revision is
+  /// kind: 'match' | 'event' | 'team' | 'member' | 'audio'. Idempotent: same id + lower/equal revision is
   /// a no-op that still reports the stored revision.
   UpsertResult upsert(String kind, String ownerId, Map<String, dynamic> doc);
 
-  /// Changes for [ownerId] with server sequence > [since].
-  ({List<Map<String, dynamic>> matches, List<Map<String, dynamic>> events, int cursor})
-      changesSince(String ownerId, int since, {int limit = 500});
+  /// Changes for [ownerId] with server sequence > [since], grouped by kind.
+  ({Map<String, List<Map<String, dynamic>>> byKind, int cursor}) changesSince(
+      String ownerId, int since,
+      {int limit = 500});
+
+  /// Audio bytes of voice incidents (kept apart from the JSON documents).
+  /// Returns false if the id belongs to another user.
+  bool putBlob(String id, String ownerId, String mime, Uint8List bytes);
+  ({String mime, Uint8List bytes})? getBlob(String id, String ownerId);
+  void deleteBlob(String id, String ownerId);
 
   int count(String kind);
   void close();
@@ -51,6 +59,9 @@ class SqliteStore implements Store {
       CREATE INDEX IF NOT EXISTS idx_docs_owner_seq ON docs(owner_id, server_seq);
       CREATE TABLE IF NOT EXISTS seq(id INTEGER PRIMARY KEY CHECK (id = 1), value INTEGER NOT NULL);
       INSERT OR IGNORE INTO seq(id, value) VALUES (1, 0);
+      CREATE TABLE IF NOT EXISTS blobs(
+        id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, mime TEXT NOT NULL,
+        bytes BLOB NOT NULL, updated_at INTEGER NOT NULL);
     ''');
   }
 
@@ -112,21 +123,43 @@ class SqliteStore implements Store {
   }
 
   @override
-  ({List<Map<String, dynamic>> matches, List<Map<String, dynamic>> events, int cursor})
-      changesSince(String ownerId, int since, {int limit = 500}) {
+  ({Map<String, List<Map<String, dynamic>>> byKind, int cursor}) changesSince(
+      String ownerId, int since,
+      {int limit = 500}) {
     final rows = _db.select(
         'SELECT kind, payload, server_seq FROM docs WHERE owner_id = ? AND server_seq > ? ORDER BY server_seq LIMIT ?',
         [ownerId, since, limit]);
-    final matches = <Map<String, dynamic>>[];
-    final events = <Map<String, dynamic>>[];
+    final byKind = <String, List<Map<String, dynamic>>>{};
     var cursor = since;
     for (final r in rows) {
       final doc = jsonDecode(r['payload'] as String) as Map<String, dynamic>;
-      (r['kind'] == 'match' ? matches : events).add(doc);
+      (byKind[r['kind'] as String] ??= []).add(doc);
       cursor = r['server_seq'] as int;
     }
-    return (matches: matches, events: events, cursor: cursor);
+    return (byKind: byKind, cursor: cursor);
   }
+
+  @override
+  bool putBlob(String id, String ownerId, String mime, Uint8List bytes) {
+    final cur = _db.select('SELECT owner_id FROM blobs WHERE id = ?', [id]);
+    if (cur.isNotEmpty && cur.first['owner_id'] != ownerId) return false;
+    _db.execute(
+        'INSERT INTO blobs(id, owner_id, mime, bytes, updated_at) VALUES (?, ?, ?, ?, ?) '
+        'ON CONFLICT(id) DO UPDATE SET mime = excluded.mime, bytes = excluded.bytes, updated_at = excluded.updated_at',
+        [id, ownerId, mime, bytes, DateTime.now().millisecondsSinceEpoch]);
+    return true;
+  }
+
+  @override
+  ({String mime, Uint8List bytes})? getBlob(String id, String ownerId) {
+    final r = _db.select('SELECT mime, bytes FROM blobs WHERE id = ? AND owner_id = ?', [id, ownerId]);
+    if (r.isEmpty) return null;
+    return (mime: r.first['mime'] as String, bytes: r.first['bytes'] as Uint8List);
+  }
+
+  @override
+  void deleteBlob(String id, String ownerId) =>
+      _db.execute('DELETE FROM blobs WHERE id = ? AND owner_id = ?', [id, ownerId]);
 
   @override
   int count(String kind) =>

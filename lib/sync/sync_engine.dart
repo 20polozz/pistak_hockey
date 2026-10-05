@@ -3,6 +3,7 @@ import 'dart:math';
 
 import '../auth/auth_service.dart';
 import '../domain/repositories/match_repository.dart';
+import 'doc_source.dart';
 import 'remote_sync_api.dart';
 
 /// localOnly: no account. needsLogin: the server rejected the session.
@@ -36,7 +37,16 @@ class SyncEngine {
     this.maxRetry = const Duration(minutes: 5),
     this.readCursor,
     this.writeCursor,
+    this.docApi,
+    this.docSources = const [],
   });
+
+  /// Teams, rosters and audio (optional: only when the backend supports it).
+  final DocSyncApi? docApi;
+  final List<DocSyncSource> docSources;
+
+  /// Files the server didn't have during this session (don't hammer it).
+  final _missingOnServer = <String>{};
 
   /// Persisted pull cursor per user (null = pull disabled).
   final Future<int> Function(String userId)? readCursor;
@@ -119,6 +129,30 @@ class SyncEngine {
         events += res.accepted.length;
         if (batch.length < batchSize || res.accepted.isEmpty) break;
       }
+      final docs = docApi;
+      if (docs != null) {
+        for (final src in docSources) {
+          while (true) {
+            final batch = await src.pending(limit: src.batchSize);
+            if (batch.isEmpty) break;
+            if (src is BlobDocSource) {
+              // File first, then its document: a device that sees the
+              // document can always download the file.
+              for (final d in batch) {
+                if (d['hasAudio'] == false) continue;
+                final blob = await src.blobFor(d['id'] as String);
+                if (blob != null) {
+                  await docs.uploadBlob(
+                      d['id'] as String, blob.bytes, blob.mimeType);
+                }
+              }
+            }
+            final res = await docs.pushDocs(src.key, batch);
+            await src.markSynced(res.accepted);
+            if (batch.length < src.batchSize || res.accepted.isEmpty) break;
+          }
+        }
+      }
       var pulled = 0;
       final uid = auth.currentUserId;
       final read = readCursor;
@@ -130,11 +164,31 @@ class SyncEngine {
           if (!p.isEmpty) {
             pulled += await repository.applyRemote(
                 matches: p.matches, events: p.events);
+            for (final src in docSources) {
+              final list = p.docs[src.key];
+              if (list != null && list.isNotEmpty) {
+                pulled += await src.applyRemote(list);
+              }
+            }
           }
           if (p.cursor == cursor) break;
           cursor = p.cursor;
           await write(uid, cursor);
-          if (p.matches.length + p.events.length < 500) break;
+          if (p.size < 500) break;
+        }
+      }
+      if (docs != null) {
+        for (final src in docSources.whereType<BlobDocSource>()) {
+          final ids = await src.missingBlobs(limit: 20);
+          for (final id in ids) {
+            if (_missingOnServer.contains(id)) continue;
+            final bytes = await docs.downloadBlob(id);
+            if (bytes == null) {
+              _missingOnServer.add(id);
+            } else {
+              await src.saveBlob(id, bytes);
+            }
+          }
         }
       }
       lastSuccess = DateTime.now();

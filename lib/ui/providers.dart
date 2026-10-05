@@ -11,6 +11,7 @@ import '../data/repositories/drift_audio_repository.dart';
 import '../data/repositories/drift_match_repository.dart';
 import '../data/repositories/drift_team_repository.dart';
 import '../data/repositories/settings_repository.dart';
+import '../data/sync/drift_doc_sources.dart';
 import '../domain/match/match_event.dart';
 import '../domain/match/match_info.dart';
 import '../domain/match/match_projector.dart';
@@ -113,13 +114,21 @@ final syncApiProvider = Provider<RemoteSyncApi>((ref) {
 
 final syncEngineProvider = Provider<SyncEngine>((ref) {
   final settings = ref.watch(settingsRepositoryProvider);
+  final db = ref.watch(databaseProvider);
+  final api = ref.watch(syncApiProvider);
   final engine = SyncEngine(
     repository: ref.watch(matchRepositoryProvider),
-    api: ref.watch(syncApiProvider),
+    api: api,
     auth: ref.watch(authServiceProvider),
     readCursor: (uid) async =>
         int.tryParse(await settings.get('sync_cursor:$uid') ?? '') ?? 0,
     writeCursor: (uid, c) => settings.set('sync_cursor:$uid', '$c'),
+    docApi: api is DocSyncApi ? api as DocSyncApi : null,
+    docSources: [
+      TeamDocSource(db),
+      MemberDocSource(db),
+      AudioDocSource(db),
+    ],
   );
   ref.onDispose(engine.dispose);
   return engine;

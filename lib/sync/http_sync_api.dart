@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -9,7 +10,7 @@ import 'remote_sync_api.dart';
 
 /// HTTPS client of the PISTAK API (backend/). Any network problem becomes a
 /// [SyncUnavailable] so the engine just retries later; nothing local changes.
-class HttpSyncApi implements RemoteSyncApi {
+class HttpSyncApi implements RemoteSyncApi, DocSyncApi {
   HttpSyncApi({
     required this.baseUrl,
     required this.token,
@@ -36,6 +37,12 @@ class HttpSyncApi implements RemoteSyncApi {
 
   Future<Map<String, dynamic>> _send(
       Future<http.Response> Function() call) async {
+    final res = await _raw(call);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<http.Response> _raw(Future<http.Response> Function() call,
+      {bool allow404 = false}) async {
     final http.Response res;
     try {
       res = await call().timeout(timeout);
@@ -49,10 +56,11 @@ class HttpSyncApi implements RemoteSyncApi {
     if (res.statusCode >= 500 || res.statusCode == 429) {
       throw SyncUnavailable('server ${res.statusCode}');
     }
+    if (allow404 && res.statusCode == 404) return res;
     if (res.statusCode >= 400) {
       throw StateError('sync rejected ${res.statusCode}: ${res.body}');
     }
-    return jsonDecode(res.body) as Map<String, dynamic>;
+    return res;
   }
 
   Future<PushResult> _push(String key, List<Map<String, dynamic>> docs) async {
@@ -85,7 +93,29 @@ class HttpSyncApi implements RemoteSyncApi {
     return PullResult(
       matches: list('matches'),
       events: list('events'),
+      docs: {
+        for (final k in const ['teams', 'members', 'audio']) k: list(k)
+      },
       cursor: (body['cursor'] as num?)?.toInt() ?? cursor,
     );
+  }
+
+  @override
+  Future<PushResult> pushDocs(String key, List<Map<String, dynamic>> docs) =>
+      _push(key, docs);
+
+  @override
+  Future<void> uploadBlob(String id, Uint8List bytes, String mimeType) async {
+    final h = await _headers();
+    await _raw(() => _client.put(_u('/audio/$id'),
+        headers: {...h, 'content-type': mimeType}, body: bytes));
+  }
+
+  @override
+  Future<Uint8List?> downloadBlob(String id) async {
+    final h = await _headers();
+    final res = await _raw(() => _client.get(_u('/audio/$id'), headers: h),
+        allow404: true);
+    return res.statusCode == 404 ? null : res.bodyBytes;
   }
 }

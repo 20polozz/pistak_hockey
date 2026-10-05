@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -11,7 +12,12 @@ import 'package:pistak/auth/remote_auth_service.dart';
 import 'package:pistak/auth/token_store.dart';
 import 'package:pistak/core/clock.dart';
 import 'package:pistak/data/db/app_database.dart';
+import 'package:pistak/data/repositories/drift_audio_repository.dart';
 import 'package:pistak/data/repositories/drift_match_repository.dart';
+import 'package:pistak/data/repositories/drift_team_repository.dart';
+import 'package:pistak/data/sync/drift_doc_sources.dart';
+import 'package:pistak/domain/audio/audio_recording.dart';
+import 'package:pistak/domain/team/team.dart';
 import 'package:pistak/domain/match/match_event.dart';
 import 'package:pistak/domain/sport/roller_hockey.dart';
 import 'package:pistak/sync/http_sync_api.dart';
@@ -33,13 +39,18 @@ class Device {
   late final RemoteAuthService auth;
   int cursor = 0;
 
-  SyncEngine engine() => SyncEngine(
-        repository: repo,
-        api: HttpSyncApi(baseUrl: baseUrl, token: auth.accessToken),
-        auth: auth,
-        readCursor: (_) async => cursor,
-        writeCursor: (_, c) async => cursor = c,
-      );
+  SyncEngine engine() {
+    final api = HttpSyncApi(baseUrl: baseUrl, token: auth.accessToken);
+    return SyncEngine(
+      repository: repo,
+      api: api,
+      auth: auth,
+      readCursor: (_) async => cursor,
+      writeCursor: (_, c) async => cursor = c,
+      docApi: api,
+      docSources: [TeamDocSource(db), MemberDocSource(db), AudioDocSource(db)],
+    );
+  }
 }
 
 void main() {
@@ -176,6 +187,96 @@ void main() {
     expect(await intruder.repo.getMatch(m.id), isNull);
 
     for (final d in [phone, tablet, intruder]) {
+      await d.db.close();
+    }
+  }, timeout: const Timeout(Duration(minutes: 3)));
+
+  test('teams, rosters and voice-incident audio reach the second device',
+      () async {
+    final phone = Device('phone2', url);
+    final tablet = Device('tablet2', url);
+    await phone.auth.register('club@pistak.test', 'roller-hockey-2026');
+    await tablet.auth.signIn('club@pistak.test', 'roller-hockey-2026');
+
+    // Phone: team + roster + a match with a voice incident.
+    final teams = DriftTeamRepository(phone.db, clock: phone.clock);
+    final team = await teams.createTeam(name: 'CP Vic', category: 'Sènior');
+    await teams.setCrest(team.id, Uint8List.fromList([137, 80, 78, 71, 1, 2]));
+    await teams.addMember(team.id,
+        role: MemberRole.player, name: 'Marc', number: 7);
+    await teams.addMember(team.id, role: MemberRole.coach, name: 'Laia');
+
+    final m = await phone.repo.createMatch(
+        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final audio = DriftAudioRepository(phone.db, clock: phone.clock);
+    final c = MatchController(
+        matchId: m.id,
+        deviceId: 'phone2',
+        repository: phone.repo,
+        clock: phone.clock,
+        audio: audio);
+    await c.startMatch();
+    final wav = Uint8List.fromList(List<int>.generate(48000, (i) => i % 256));
+    final incident = (await c.voiceIncident(
+            bytes: wav,
+            mimeType: 'audio/wav',
+            duration: const Duration(seconds: 2),
+            at: phone.clock.now()))
+        .single;
+
+    final r1 = await phone.engine().syncOnce();
+    expect(r1.ok, isTrue, reason: '${r1.error}');
+
+    // Tablet gets everything, including the audio file.
+    final r2 = await tablet.engine().syncOnce();
+    expect(r2.ok, isTrue, reason: '${r2.error}');
+    final tTeams = DriftTeamRepository(tablet.db, clock: tablet.clock);
+    final got = (await tTeams.getTeams()).single;
+    expect(got.name, 'CP Vic');
+    expect(got.category, 'Sènior');
+    expect(got.crest, [137, 80, 78, 71, 1, 2]);
+    final members = await tTeams.getMembers(got.id);
+    expect(members.map((x) => x.name).toSet(), {'Marc', 'Laia'});
+    expect(members.firstWhere((x) => x.name == 'Marc').number, 7);
+
+    final tAudio = DriftAudioRepository(tablet.db, clock: tablet.clock);
+    final audioId = incident.metadata[MetaKeys.audioId] as String;
+    final rec = await tAudio.get(audioId);
+    expect(rec, isNotNull);
+    expect(rec!.eventId, incident.id);
+    expect(rec.bytes, wav, reason: 'audio downloaded from the server');
+    expect(rec.transcriptStatus, TranscriptStatus.pending);
+
+    // Tablet renames a player → phone.
+    final marc = members.firstWhere((x) => x.name == 'Marc');
+    await tTeams.saveMember(TeamMember(
+        id: marc.id,
+        teamId: marc.teamId,
+        role: marc.role,
+        name: 'Marc P.',
+        number: marc.number,
+        createdAt: marc.createdAt,
+        updatedAt: marc.updatedAt));
+    expect((await tablet.engine().syncOnce()).ok, isTrue);
+    expect((await phone.engine().syncOnce()).ok, isTrue);
+    expect((await teams.getMembers(team.id)).map((x) => x.name),
+        containsAll(['Marc P.', 'Laia']));
+
+    // Privacy: deleting the audio on the phone removes it everywhere.
+    await audio.deleteAudio(audioId);
+    expect((await phone.engine().syncOnce()).ok, isTrue);
+    expect((await tablet.engine().syncOnce()).ok, isTrue);
+    expect((await tAudio.get(audioId))!.bytes, isNull);
+    final token = await phone.auth.accessToken();
+    final res =
+        await HttpClient().getUrl(Uri.parse('$url/audio/$audioId')).then((r) {
+      r.headers.set('authorization', 'Bearer $token');
+      return r.close();
+    });
+    expect(res.statusCode, 404);
+    await res.drain<void>();
+
+    for (final d in [phone, tablet]) {
       await d.db.close();
     }
   }, timeout: const Timeout(Duration(minutes: 3)));

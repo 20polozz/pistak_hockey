@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
@@ -11,8 +12,11 @@ import 'store.dart';
 ///   GET  /health
 ///   POST /auth/register {email, password}      → {token, userId, email}
 ///   POST /auth/login    {email, password}      → {token, userId, email}
-///   POST /sync/push     {matches:[], events:[]} (Bearer) → {accepted:{matches:{id:rev}, events:{id:rev}}, rejected:{id:reason}}
-///   GET  /sync/pull?since=N                     (Bearer) → {matches:[], events:[], cursor}
+///   POST /sync/push     {matches:[], events:[], teams:[], members:[], audio:[]} (Bearer)
+///                         → {accepted:{KEY:{id:rev}}, rejected:{id:reason}}
+///   GET  /sync/pull?since=N                     (Bearer) → {KEY:[], cursor}
+///   PUT  /audio/ID    raw bytes (Bearer)      → {ok}   (voice-incident audio)
+///   GET  /audio/ID                  (Bearer)  → raw bytes
 class PistakApi {
   PistakApi({
     required this.store,
@@ -20,6 +24,7 @@ class PistakApi {
     PasswordHasher? hasher,
     this.maxBatch = 500,
     this.allowedOrigins = const ['*'],
+    this.maxAudioBytes = 25 * 1024 * 1024,
   }) : hasher = hasher ?? PasswordHasher();
 
   final Store store;
@@ -27,6 +32,16 @@ class PistakApi {
   final PasswordHasher hasher;
   final int maxBatch;
   final List<String> allowedOrigins;
+  final int maxAudioBytes;
+
+  /// JSON key in push/pull → document kind stored on the server.
+  static const kinds = {
+    'matches': 'match',
+    'events': 'event',
+    'teams': 'team',
+    'members': 'member',
+    'audio': 'audio',
+  };
   final _failures = <String, List<DateTime>>{};
   final _rnd = Random.secure();
 
@@ -40,7 +55,9 @@ class PistakApi {
     ..post('/auth/register', _register)
     ..post('/auth/login', _login)
     ..post('/sync/push', _push)
-    ..get('/sync/pull', _pull);
+    ..get('/sync/pull', _pull)
+    ..put('/audio/<id>', _putAudio)
+    ..get('/audio/<id>', _getAudio);
 
   // ------------------------------------------------------------------ auth
 
@@ -95,33 +112,33 @@ class PistakApi {
     final uid = _user(r);
     if (uid == null) return _json({'error': 'unauthorized'}, 401);
     final body = await _body(r);
-    final matches = (body['matches'] as List?) ?? const [];
-    final events = (body['events'] as List?) ?? const [];
-    if (matches.length + events.length > maxBatch) {
+    final lists = {
+      for (final k in kinds.keys) k: (body[k] as List?) ?? const <dynamic>[],
+    };
+    final total = lists.values.fold<int>(0, (a, l) => a + l.length);
+    if (total > maxBatch) {
       return _json({'error': 'batch_too_large', 'max': maxBatch}, 413);
     }
-    final accM = <String, int>{};
-    final accE = <String, int>{};
+    final accepted = <String, Map<String, int>>{};
     final rejected = <String, String>{};
-    void apply(String kind, List<dynamic> docs, Map<String, int> acc) {
-      for (final d in docs) {
+    for (final entry in lists.entries) {
+      final acc = accepted[entry.key] = <String, int>{};
+      for (final d in entry.value) {
         if (d is! Map<String, dynamic>) continue;
-        final res = store.upsert(kind, uid, d);
+        final res = store.upsert(kinds[entry.key]!, uid, d);
         final id = d['id'] as String? ?? '?';
         if (res.revision != null) {
           acc[id] = res.revision!;
+          // Privacy: audio removed on a device is removed here too.
+          if (entry.key == 'audio' && d['hasAudio'] == false && res.revision == d['revision']) {
+            store.deleteBlob(id, uid);
+          }
         } else {
           rejected[id] = res.rejected!;
         }
       }
     }
-
-    apply('match', matches, accM);
-    apply('event', events, accE);
-    return _json({
-      'accepted': {'matches': accM, 'events': accE},
-      'rejected': rejected,
-    });
+    return _json({'accepted': accepted, 'rejected': rejected});
   }
 
   Future<Response> _pull(Request r) async {
@@ -129,7 +146,39 @@ class PistakApi {
     if (uid == null) return _json({'error': 'unauthorized'}, 401);
     final since = int.tryParse(r.url.queryParameters['since'] ?? '0') ?? 0;
     final c = store.changesSince(uid, since);
-    return _json({'matches': c.matches, 'events': c.events, 'cursor': c.cursor});
+    return _json({
+      for (final e in kinds.entries) e.key: c.byKind[e.value] ?? const [],
+      'cursor': c.cursor,
+    });
+  }
+
+  static final _idRe = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
+
+  Future<Response> _putAudio(Request r, String id) async {
+    final uid = _user(r);
+    if (uid == null) return _json({'error': 'unauthorized'}, 401);
+    if (!_idRe.hasMatch(id)) return _json({'error': 'bad_id'}, 400);
+    final len = r.contentLength;
+    if (len != null && len > maxAudioBytes) return _json({'error': 'too_large'}, 413);
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in r.read()) {
+      builder.add(chunk);
+      if (builder.length > maxAudioBytes) return _json({'error': 'too_large'}, 413);
+    }
+    if (builder.isEmpty) return _json({'error': 'empty'}, 400);
+    final mime = (r.headers['content-type'] ?? 'application/octet-stream').split(';').first.trim();
+    if (!store.putBlob(id, uid, mime, builder.takeBytes())) {
+      return _json({'error': 'forbidden'}, 403);
+    }
+    return _json({'ok': true});
+  }
+
+  Future<Response> _getAudio(Request r, String id) async {
+    final uid = _user(r);
+    if (uid == null) return _json({'error': 'unauthorized'}, 401);
+    final b = store.getBlob(id, uid);
+    if (b == null) return _json({'error': 'not_found'}, 404);
+    return Response.ok(b.bytes, headers: {'content-type': b.mime, 'cache-control': 'private, no-store'});
   }
 
   // --------------------------------------------------------------- helpers
@@ -170,7 +219,7 @@ class PistakApi {
         final headers = {
           if (allow.isNotEmpty) 'access-control-allow-origin': allow,
           'access-control-allow-headers': 'authorization, content-type',
-          'access-control-allow-methods': 'GET, POST, OPTIONS',
+          'access-control-allow-methods': 'GET, POST, PUT, OPTIONS',
           'vary': 'origin',
         };
         if (r.method == 'OPTIONS') return Response(204, headers: headers);

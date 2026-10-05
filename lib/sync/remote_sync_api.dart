@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../domain/match/match_event.dart';
 import '../domain/match/match_info.dart';
 
@@ -22,12 +24,34 @@ abstract class RemoteSyncApi {
 
 /// Raw documents from the server (same JSON as MatchInfo/MatchEvent.toJson).
 class PullResult {
-  const PullResult(
-      {this.matches = const [], this.events = const [], required this.cursor});
+  const PullResult({
+    this.matches = const [],
+    this.events = const [],
+    this.docs = const {},
+    required this.cursor,
+  });
   final List<Map<String, dynamic>> matches;
   final List<Map<String, dynamic>> events;
+
+  /// Other synced documents by key ('teams', 'members', 'audio').
+  final Map<String, List<Map<String, dynamic>>> docs;
   final int cursor;
-  bool get isEmpty => matches.isEmpty && events.isEmpty;
+
+  int get size =>
+      matches.length +
+      events.length +
+      docs.values.fold<int>(0, (a, l) => a + l.length);
+  bool get isEmpty => size == 0;
+}
+
+/// Extra documents (teams, rosters, audio) and audio bytes.
+/// Same idempotency rule as [RemoteSyncApi].
+abstract class DocSyncApi {
+  Future<PushResult> pushDocs(String key, List<Map<String, dynamic>> docs);
+  Future<void> uploadBlob(String id, Uint8List bytes, String mimeType);
+
+  /// null = the server doesn't have it (yet).
+  Future<Uint8List?> downloadBlob(String id);
 }
 
 /// Phase 1: no backend. Nothing leaves the device.

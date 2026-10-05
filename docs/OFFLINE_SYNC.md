@@ -103,4 +103,13 @@ Si la transcripció falla, l'àudio continua existint. L'usuari pot esborrar àu
 - **Prova E2E** (`test/data/backend_e2e_test.dart`): servidor real, mòbil sense cobertura
   (17 esdeveniments), torna la cobertura → s'envien una sola vegada, una tauleta amb el mateix
   compte rep el partit sencer, una edició a la tauleta arriba al mòbil, un altre usuari no veu res.
-- Pendent: sincronitzar també equips/plantilles i els àudios (mateix protocol, nous `kind`).
+- **Equips, plantilles i àudios** també se sincronitzen (mateix protocol, `kind` = `team`, `member`,
+  `audio`; `lib/sync/doc_source.dart` + `lib/data/sync/drift_doc_sources.dart`):
+  - Equips amb l'escut en base64 (lots de 20); membres en lots de 100.
+  - Àudio: primer es puja el fitxer (`PUT /audio/<id>`, binari, idempotent) i després el document amb
+    les metadades; així qualsevol dispositiu que veu el document pot baixar el fitxer
+    (`GET /audio/<id>`). Els fitxers que falten es baixen després de cada *pull*.
+  - Esborrar un àudio (privadesa) envia `hasAudio:false` → el servidor també esborra el fitxer, i
+    els altres dispositius esborren la seva còpia.
+  - Un canvi local pendent mai és sobreescrit pel remot (mateixa regla que partits/esdeveniments).
+  - Test E2E amb el servidor real: `test/data/backend_e2e_test.dart`.

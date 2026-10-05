@@ -119,4 +119,47 @@ void main() {
     final other = Jwt('another-secret-another-secret-12345');
     expect(other.verify(t, now: DateTime.utc(2026, 1, 1)), isNull);
   });
+
+  test('teams, members and audio metadata sync like matches', () async {
+    final t = await register('t@t.co');
+    final (code, body) = await call('POST', '/sync/push', token: t, body: {
+      'teams': [{'id': 'team1', 'name': 'CP Vic', 'revision': 2}],
+      'members': [{'id': 'p1', 'teamId': 'team1', 'name': 'Marc', 'revision': 1}],
+      'audio': [{'id': 'a1', 'eventId': 'e1', 'hasAudio': true, 'revision': 1}],
+    });
+    expect(code, 200);
+    expect(body['accepted']['teams'], {'team1': 2});
+    expect(body['accepted']['members'], {'p1': 1});
+    expect(body['accepted']['audio'], {'a1': 1});
+    final (_, pulled) = await call('GET', '/sync/pull?since=0', token: t);
+    expect((pulled['teams'] as List).single['name'], 'CP Vic');
+    expect((pulled['members'] as List).single['name'], 'Marc');
+    expect((pulled['audio'] as List).single['id'], 'a1');
+    expect(pulled['matches'], isEmpty);
+  });
+
+  test('audio bytes: upload, download, isolation, privacy delete', () async {
+    final a = await register('aud@a.co');
+    final b = await register('aud@b.co');
+    Future<Response> raw(String method, String path, String token, [List<int>? bytes]) =>
+        Future.value(h(Request(method, Uri.parse('http://x$path'),
+            body: bytes,
+            headers: {'authorization': 'Bearer $token', 'content-type': 'audio/wav'})));
+    final bytes = List<int>.generate(70000, (i) => i % 251);
+    expect((await raw('PUT', '/audio/a1', a, bytes)).statusCode, 200);
+    expect((await raw('PUT', '/audio/a1', a, bytes)).statusCode, 200, reason: 'idempotent');
+    final got = await raw('GET', '/audio/a1', a);
+    expect(got.statusCode, 200);
+    expect(got.headers['content-type'], 'audio/wav');
+    expect(await got.read().expand((c) => c).toList(), bytes);
+    // Another user can neither read nor overwrite it.
+    expect((await raw('GET', '/audio/a1', b)).statusCode, 404);
+    expect((await raw('PUT', '/audio/a1', b, [1, 2, 3])).statusCode, 403);
+    expect((await raw('PUT', '/audio/../x', a, [1])).statusCode, isNot(200));
+    // Deleting the audio on the device deletes it on the server.
+    await call('POST', '/sync/push', token: a, body: {
+      'audio': [{'id': 'a1', 'hasAudio': false, 'revision': 2}],
+    });
+    expect((await raw('GET', '/audio/a1', a)).statusCode, 404);
+  });
 }
