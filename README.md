@@ -18,7 +18,7 @@ Arquitectura preparada per a altres esports de pista.
 | 3 — Informes | PDF, CSV, JSON, compartir/descarregar | ✅ Fet |
 | 4 — Àudio | Speech-to-Text real (backend) | Fet: `POST /transcribe` (proveïdor compatible OpenAI/Whisper, clau al servidor); s'activa amb `PISTAK_STT_API_KEY` |
 | 5 — Wear OS | App Kotlin al rellotge + pont al mòbil (idempotent) | Fet (compila, tests; pendent provar en rellotge real) |
-| 6 — Polish | Icona, splash, branding | ✅ Icona/splash fets; resta d'animacions/accessibilitat en curs |
+| 6 — Polish | Icona, splash, branding, accessibilitat | ✅ Icona/splash; ✅ text gran fins a 2× sense desbordar (tests 360×640); ✅ guies d'accessibilitat (mida de botons, etiquetes, contrast) |
 
 ## Plataformes
 
