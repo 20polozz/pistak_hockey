@@ -32,6 +32,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Spacer(flex: 2),
+                  Center(
+                    child: Image.asset('assets/branding/pistak_icon_1024.png',
+                        width: 96, height: 96),
+                  ),
+                  const SizedBox(height: 16),
                   const Text(
                     'PISTAK',
                     textAlign: TextAlign.center,
