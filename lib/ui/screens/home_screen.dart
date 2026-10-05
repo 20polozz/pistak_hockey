@@ -18,6 +18,7 @@ import 'match_details_screen.dart';
 import 'match_screen.dart';
 import 'match_summary_screen.dart';
 import 'settings_screen.dart';
+import 'stats_screen.dart';
 import 'teams_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -42,6 +43,11 @@ class HomeScreen extends ConsumerWidget {
                 : Colors.transparent),
         actions: [
           if (isBackendConfigured) const SyncBadge(),
+          IconButton(
+            tooltip: l.statistics,
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () => _push(context, const StatsScreen()),
+          ),
           IconButton(
             tooltip: l.settings,
             icon: const Icon(Icons.settings_outlined),

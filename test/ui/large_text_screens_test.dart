@@ -18,6 +18,7 @@ import 'package:pistak/ui/screens/match_details_screen.dart';
 import 'package:pistak/ui/screens/match_summary_screen.dart';
 import 'package:pistak/ui/screens/onboarding_screen.dart';
 import 'package:pistak/ui/screens/settings_screen.dart';
+import 'package:pistak/ui/screens/stats_screen.dart';
 import 'package:pistak/ui/screens/teams_screen.dart';
 import 'package:pistak/ui/screens/timeline_screen.dart';
 
@@ -42,6 +43,7 @@ void main() {
     'settings': (_) => const SettingsScreen(),
     'teams': (_) => const TeamsScreen(),
     'onboarding': (_) => const OnboardingScreen(),
+    'stats': (_) => const StatsScreen(),
   };
 
   for (final entry in screens.entries) {
