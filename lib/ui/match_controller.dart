@@ -54,15 +54,25 @@ class MatchController {
   Future<List<MatchEvent>> _act(
       List<MatchEvent> Function(EventFactory f, MatchState s) build,
       {DateTime? at,
+      IdGenerator? idGen,
+      Set<String>? skipIfAny,
       Future<void> Function(List<MatchEvent> events)? before}) {
     final tapTime = at ?? clock.now();
     return _serial(() async {
-      final state = await currentState();
+      final info = await repository.getMatch(matchId);
+      if (info == null) throw StateError('Match $matchId not found');
+      final existing = await repository.getEvents(matchId);
+      if (skipIfAny != null &&
+          existing.any((e) =>
+              skipIfAny.contains(e.id) || skipIfAny.contains(e.actionId))) {
+        return const <MatchEvent>[]; // already applied (replayed command)
+      }
+      final state = projector.project(info.format, existing);
       final factory = EventFactory(
         matchId: matchId,
         deviceId: deviceId,
         clock: FixedClock(tapTime),
-        ids: ids,
+        ids: idGen ?? ids,
       );
       final events = build(factory, state);
       if (events.isEmpty) return const <MatchEvent>[];
@@ -138,6 +148,19 @@ class MatchController {
       )),
     );
   }
+
+  /// Applies an action that came from another device (the watch).
+  /// [commandId] is generated on that device: event ids are derived from it,
+  /// so applying the same command twice is a no-op.
+  Future<List<MatchEvent>> applyExternal(
+    String commandId,
+    DateTime at,
+    List<MatchEvent> Function(EventFactory f, MatchState s) build,
+  ) =>
+      _act(build,
+          at: at,
+          idGen: DerivedIdGenerator(commandId),
+          skipIfAny: DerivedIdGenerator.firstIds(commandId));
 
   // corrections
   Future<List<MatchEvent>> undo() =>

@@ -29,6 +29,7 @@ class _PistakAppState extends ConsumerState<PistakApp> {
     // Background work that never blocks recording: pending transcriptions
     // (and, from Phase 2, the cloud sync engine).
     _tick();
+    ref.read(wearBridgeProvider).start();
     _background = Timer.periodic(const Duration(minutes: 2), (_) => _tick());
   }
 

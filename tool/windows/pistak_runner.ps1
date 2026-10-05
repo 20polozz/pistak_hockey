@@ -41,6 +41,7 @@ $actions = @{
   'backendget'  = 'cd backend && dart pub get'
   'backendtest' = 'cd backend && dart test'
   'backendanalyze' = 'cd backend && dart analyze'
+  'wearbuild' = 'cd wear_os && gradlew.bat assembleDebug --console=plain'
   # Stops stray local API servers started by tests (only bin/server.dart).
   'killserver' = 'powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like ''*bin/server.dart*'' } | Invoke-CimMethod -MethodName Terminate"'
 }

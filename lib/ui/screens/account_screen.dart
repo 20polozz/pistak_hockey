@@ -62,9 +62,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Future<void> _syncNow(AppLocalizations l) async {
     final r = await ref.read(syncEngineProvider).syncOnce();
     if (!mounted) return;
-    setState(() => _info = r.ok
-        ? l.syncDone(r.matches + r.events, r.pulled)
-        : l.errNetwork);
+    setState(() => _info =
+        r.ok ? l.syncDone(r.matches + r.events, r.pulled) : l.errNetwork);
   }
 
   @override

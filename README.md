@@ -17,7 +17,7 @@ Arquitectura preparada per a altres esports de pista.
 | 2 — Comptes i núvol | Registre/login, equips i plantilles, partits programats, backend propi (Dart), sincronització push/pull multi-dispositiu, detecció de connexió | ✅ Fet i provat E2E amb servidor real (falta desplegar-lo a internet) |
 | 3 — Informes | PDF, CSV, JSON, compartir/descarregar | ✅ Fet |
 | 4 — Àudio | Speech-to-Text real (backend) | Gravació local + cua de transcripció ja fetes; falta el servei |
-| 5 — Wear OS | App Kotlin al rellotge | Dissenyada |
+| 5 — Wear OS | App Kotlin al rellotge + pont al mòbil (idempotent) | Fet (compila, tests; pendent provar en rellotge real) |
 | 6 — Polish | Icona, splash, branding | ✅ Icona/splash fets; resta d'animacions/accessibilitat en curs |
 
 ## Plataformes

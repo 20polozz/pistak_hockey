@@ -1,6 +1,8 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../wear/wear_bridge.dart';
+
 import '../auth/auth_service.dart';
 import '../auth/remote_auth_service.dart';
 import '../core/clock.dart';
@@ -199,3 +201,14 @@ final matchControllerProvider =
           clock: ref.watch(clockProvider),
           audio: ref.watch(audioRepositoryProvider),
         ));
+
+/// Wear OS link (Android only; a no-op elsewhere).
+final wearBridgeProvider = Provider<WearBridge>((ref) {
+  final bridge = WearBridge(
+    repository: ref.watch(matchRepositoryProvider),
+    controllerFor: (id) => ref.read(matchControllerProvider(id)),
+    clock: ref.watch(clockProvider),
+  );
+  ref.onDispose(bridge.dispose);
+  return bridge;
+});

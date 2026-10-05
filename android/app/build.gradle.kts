@@ -47,3 +47,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Wear OS data layer: receives taps from the PISTAK watch app.
+    implementation("com.google.android.gms:play-services-wearable:19.0.0")
+}

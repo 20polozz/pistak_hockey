@@ -34,7 +34,8 @@ class HttpSyncApi implements RemoteSyncApi {
     };
   }
 
-  Future<Map<String, dynamic>> _send(Future<http.Response> Function() call) async {
+  Future<Map<String, dynamic>> _send(
+      Future<http.Response> Function() call) async {
     final http.Response res;
     try {
       res = await call().timeout(timeout);
@@ -58,8 +59,10 @@ class HttpSyncApi implements RemoteSyncApi {
     final h = await _headers();
     final body = await _send(() => _client.post(_u('/sync/push'),
         headers: h, body: jsonEncode({key: docs})));
-    final acc = (body['accepted'] as Map<String, dynamic>)[key] as Map<String, dynamic>;
-    return PushResult({for (final e in acc.entries) e.key: (e.value as num).toInt()});
+    final acc =
+        (body['accepted'] as Map<String, dynamic>)[key] as Map<String, dynamic>;
+    return PushResult(
+        {for (final e in acc.entries) e.key: (e.value as num).toInt()});
   }
 
   @override
@@ -73,8 +76,8 @@ class HttpSyncApi implements RemoteSyncApi {
   @override
   Future<PullResult> pull(int cursor) async {
     final h = await _headers();
-    final body =
-        await _send(() => _client.get(_u('/sync/pull', {'since': '$cursor'}), headers: h));
+    final body = await _send(
+        () => _client.get(_u('/sync/pull', {'since': '$cursor'}), headers: h));
     List<Map<String, dynamic>> list(String k) => [
           for (final x in (body[k] as List? ?? const []))
             Map<String, dynamic>.from(x as Map)

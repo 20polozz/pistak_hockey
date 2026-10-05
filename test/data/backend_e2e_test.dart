@@ -54,9 +54,14 @@ void main() {
     final root = Platform.environment['FLUTTER_ROOT'];
     final dartExe = root == null
         ? 'dart'
-        : [root, 'bin', 'cache', 'dart-sdk', 'bin',
-                Platform.isWindows ? 'dart.exe' : 'dart']
-            .join(Platform.pathSeparator);
+        : [
+            root,
+            'bin',
+            'cache',
+            'dart-sdk',
+            'bin',
+            Platform.isWindows ? 'dart.exe' : 'dart'
+          ].join(Platform.pathSeparator);
     server = await Process.start(
       dartExe,
       ['run', 'bin/server.dart'],
@@ -109,7 +114,10 @@ void main() {
         homeName: 'CP Exemple',
         awayName: 'HC Exemple');
     final c = MatchController(
-        matchId: m.id, deviceId: 'phone', repository: phone.repo, clock: phone.clock);
+        matchId: m.id,
+        deviceId: 'phone',
+        repository: phone.repo,
+        clock: phone.clock);
     await c.startMatch();
     for (var i = 0; i < 12; i++) {
       phone.clock.advance(const Duration(minutes: 1));
@@ -144,8 +152,12 @@ void main() {
 
     // Tablet assigns the blue card to the away team → back to the phone.
     final tc = MatchController(
-        matchId: m.id, deviceId: 'tablet', repository: tablet.repo, clock: tablet.clock);
-    final onT = (await tablet.repo.getEvents(m.id)).firstWhere((e) => e.id == card.id);
+        matchId: m.id,
+        deviceId: 'tablet',
+        repository: tablet.repo,
+        clock: tablet.clock);
+    final onT =
+        (await tablet.repo.getEvents(m.id)).firstWhere((e) => e.id == card.id);
     await tc.setTeam(onT, TeamSide.away);
     expect((await tablet.engine().syncOnce()).events, 1);
     final r3 = await phone.engine().syncOnce();

@@ -15,7 +15,8 @@ class SecureTokenStore implements TokenStore {
   @override
   Future<String?> read(String key) => _s.read(key: key);
   @override
-  Future<void> write(String key, String value) => _s.write(key: key, value: value);
+  Future<void> write(String key, String value) =>
+      _s.write(key: key, value: value);
   @override
   Future<void> delete(String key) => _s.delete(key: key);
 }
