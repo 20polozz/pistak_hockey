@@ -1,0 +1,31 @@
+name: pistak
+description: "PISTAK — Matchday made simple. Live match tracking for roller hockey."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.6.0
+  flutter: ">=3.32.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+  flutter_riverpod: ^2.6.1
+  drift: ^2.22.1
+  drift_flutter: ^0.2.4
+  uuid: ^4.5.1
+  wakelock_plus: ^1.2.10
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  drift_dev: ^2.22.1
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
+  generate: true

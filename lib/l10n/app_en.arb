@@ -1,0 +1,236 @@
+{
+  "@@locale": "en",
+  "appName": "PISTAK",
+  "tagline": "Matchday made simple.",
+  "taglineSport": "Live match tracking for roller hockey",
+  "start": "START",
+  "loginQuestion": "Do you want to sign in?",
+  "signIn": "SIGN IN",
+  "continueWithoutAccount": "CONTINUE WITHOUT ACCOUNT",
+  "accountsComingSoon": "Accounts and cloud sync arrive in the next phase. For now everything is saved on this device.",
+  "newMatch": "NEW MATCH",
+  "matchInProgress": "Match in progress",
+  "continueMatch": "CONTINUE MATCH",
+  "myMatches": "My matches",
+  "noMatchesYet": "No matches yet. Tap NEW MATCH to start recording — no account or internet needed.",
+  "untitledMatch": "UNTITLED MATCH",
+  "home": "Home",
+  "away": "Away",
+  "homeUpper": "HOME",
+  "awayUpper": "AWAY",
+  "statusNotStarted": "Not started",
+  "statusLive": "Live",
+  "statusFinished": "Finished",
+  "periodLabel": "PERIOD {n}",
+  "@periodLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "periodShort": "P{n}",
+  "@periodShort": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "breakLabel": "BREAK",
+  "notStartedLabel": "READY",
+  "finishedLabel": "FULL TIME",
+  "startMatch": "START MATCH",
+  "pauseMatch": "PAUSE MATCH",
+  "resumeMatch": "RESUME",
+  "endPeriod": "END PERIOD {n}",
+  "@endPeriod": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "startPeriod": "START PERIOD {n}",
+  "@startPeriod": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "endMatch": "END MATCH",
+  "viewSummary": "VIEW SUMMARY",
+  "goalHome": "GOAL HOME",
+  "goalAway": "GOAL AWAY",
+  "foulHome": "FOUL HOME",
+  "foulAway": "FOUL AWAY",
+  "timeoutHome": "TIMEOUT HOME",
+  "timeoutAway": "TIMEOUT AWAY",
+  "cardYellow": "YELLOW",
+  "cardBlue": "BLUE",
+  "cardRed": "RED",
+  "incident": "INCIDENT",
+  "evMatchStart": "Match start",
+  "evMatchEnd": "End of match",
+  "evPeriodStart": "Start of period {n}",
+  "@evPeriodStart": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "evPeriodEnd": "End of period {n}",
+  "@evPeriodEnd": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "evBreak": "Break",
+  "evPause": "Clock paused",
+  "evPauseTimeout": "Clock paused (timeout)",
+  "evResume": "Clock resumed",
+  "evClockAdjust": "Clock adjusted",
+  "evGoal": "Goal",
+  "evFoul": "Foul",
+  "evCardYellow": "Yellow card",
+  "evCardBlue": "Blue card",
+  "evCardRed": "Red card",
+  "evTimeout": "Timeout",
+  "evIncident": "Incident",
+  "evIncidentVoice": "Voice incident",
+  "evIncidentUnjustified": "Incident (no details)",
+  "evUnknown": "Event",
+  "scoreAfter": "{home} - {away}",
+  "@scoreAfter": {
+    "placeholders": {
+      "home": {
+        "type": "int"
+      },
+      "away": {
+        "type": "int"
+      }
+    }
+  },
+  "undo": "UNDO",
+  "undone": "Undone: {label}",
+  "@undone": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "nothingToUndo": "Nothing to undo",
+  "assignTeam": "Assign team",
+  "noTeam": "No team",
+  "timeline": "Timeline",
+  "showVoided": "Show deleted",
+  "voided": "Deleted",
+  "editEvent": "Edit event",
+  "team": "Team",
+  "matchTimeField": "Match time (mm:ss)",
+  "textField": "Text",
+  "save": "SAVE",
+  "cancel": "Cancel",
+  "deleteAction": "Delete",
+  "restore": "Restore",
+  "invalidTime": "Invalid time. Use mm:ss.",
+  "incidentTitle": "Incident",
+  "incidentWritten": "Written incident",
+  "incidentWrittenHint": "Describe what happened",
+  "incidentVoiceSoon": "Voice incident (coming soon)",
+  "incidentUnjustifiedAction": "Incident without details",
+  "matchDetails": "Match details",
+  "fieldHomeTeam": "Home team",
+  "fieldAwayTeam": "Away team",
+  "fieldCategory": "Category",
+  "fieldCompetition": "Competition",
+  "fieldVenue": "Venue",
+  "fieldSeason": "Season",
+  "fieldDate": "Date and time",
+  "fieldNotes": "Additional information",
+  "fieldFormat": "Format",
+  "pickDate": "Pick date",
+  "formatPeriods": "Periods",
+  "formatPeriodMinutes": "Minutes per period",
+  "formatBreakMinutes": "Break (minutes)",
+  "formatCustom": "Custom",
+  "formatStopOnTimeout": "Timeout stops the clock",
+  "formatLocked": "The format can't be changed once the match has started.",
+  "summary": "Match summary",
+  "generalInfo": "General information",
+  "statistics": "Statistics",
+  "statGoals": "Goals",
+  "statFouls": "Fouls",
+  "statYellow": "Yellow cards",
+  "statBlue": "Blue cards",
+  "statRed": "Red cards",
+  "statTimeouts": "Timeouts",
+  "statIncidents": "Incidents",
+  "statPauses": "Pauses",
+  "statUnassignedCards": "Cards without team",
+  "duration": "Duration",
+  "startTime": "Start time",
+  "endTime": "End time",
+  "date": "Date",
+  "incidentsSection": "Incidents",
+  "confirmEndPeriod": "End period {n}?",
+  "@confirmEndPeriod": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "confirmEndMatch": "End the match?",
+  "confirmEndBody": "You can undo it right after if it was a mistake.",
+  "confirm": "CONFIRM",
+  "timeoutBanner": "Timeout {team} · {time}",
+  "@timeoutBanner": {
+    "placeholders": {
+      "team": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "breakBanner": "Break · {time}",
+  "@breakBanner": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "syncLocalOnly": "On this device",
+  "syncSynced": "Synced",
+  "syncSyncing": "Syncing",
+  "syncOffline": "Offline",
+  "pendingEvents": "{n} pending",
+  "@pendingEvents": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "settings": "Settings",
+  "language": "Language",
+  "languageSystem": "Device language",
+  "deviceId": "Device ID",
+  "adjustClock": "Adjust clock",
+  "adjustClockHint": "Elapsed time in the current period (mm:ss)",
+  "deleteMatch": "Delete match",
+  "deleteMatchConfirm": "Delete this match? It will disappear from the list.",
+  "foulsShort": "Fouls",
+  "timeoutsShort": "TO",
+  "tapStartHint": "Tap START MATCH to run the clock. Events can be recorded at any time.",
+  "edit": "Edit",
+  "savedLocally": "Saved on this device"
+}

@@ -1,0 +1,113 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../auth/auth_service.dart';
+import '../core/clock.dart';
+import '../data/db/app_database.dart';
+import '../data/repositories/drift_match_repository.dart';
+import '../data/repositories/settings_repository.dart';
+import '../domain/match/match_event.dart';
+import '../domain/match/match_info.dart';
+import '../domain/match/match_projector.dart';
+import '../domain/match/match_state.dart';
+import '../domain/repositories/match_repository.dart';
+import '../services/match_session_service.dart';
+import '../sync/remote_sync_api.dart';
+import '../sync/sync_engine.dart';
+import 'match_controller.dart';
+
+// ------------------------------------------------- infrastructure (overridden)
+final databaseProvider =
+    Provider<AppDatabase>((ref) => throw UnimplementedError('override in main'));
+final deviceIdProvider =
+    Provider<String>((ref) => throw UnimplementedError('override in main'));
+
+final clockProvider = Provider<Clock>((ref) => const SystemClock());
+
+final settingsRepositoryProvider = Provider<SettingsRepository>(
+    (ref) => SettingsRepository(ref.watch(databaseProvider)));
+
+final matchRepositoryProvider = Provider<MatchRepository>((ref) =>
+    DriftMatchRepository(
+      ref.watch(databaseProvider),
+      deviceId: ref.watch(deviceIdProvider),
+      clock: ref.watch(clockProvider),
+    ));
+
+final authServiceProvider =
+    Provider<AuthService>((ref) => const GuestAuthService());
+
+final syncEngineProvider = Provider<SyncEngine>((ref) {
+  final engine = SyncEngine(
+    repository: ref.watch(matchRepositoryProvider),
+    api: const OfflineOnlyApi(), // Phase 2: HTTP implementation.
+    auth: ref.watch(authServiceProvider),
+  );
+  ref.onDispose(engine.dispose);
+  return engine;
+});
+
+final sessionServiceProvider =
+    Provider<MatchSessionService>((ref) => const MatchSessionService());
+
+/// null = device language.
+final localeCodeProvider = StateProvider<String?>((ref) => null);
+
+// ------------------------------------------------------------------- queries
+final matchesProvider = StreamProvider<List<MatchInfo>>(
+    (ref) => ref.watch(matchRepositoryProvider).watchMatches());
+
+final activeMatchProvider = StreamProvider<MatchInfo?>(
+    (ref) => ref.watch(matchRepositoryProvider).watchActiveMatch());
+
+final pendingCountProvider = StreamProvider<int>(
+    (ref) => ref.watch(matchRepositoryProvider).watchPendingCount());
+
+final matchProvider = StreamProvider.family<MatchInfo?, String>(
+    (ref, id) => ref.watch(matchRepositoryProvider).watchMatch(id));
+
+final matchEventsProvider = StreamProvider.family<List<MatchEvent>, String>(
+    (ref, id) => ref.watch(matchRepositoryProvider).watchEvents(id));
+
+/// Everything a match screen needs, derived from what is persisted.
+class MatchView {
+  const MatchView(this.info, this.events, this.state);
+  final MatchInfo info;
+
+  /// All events including voided ones, chronological.
+  final List<MatchEvent> events;
+  final MatchState state;
+
+  Iterable<MatchEvent> get activeEvents => events.where((e) => !e.isVoided);
+}
+
+class MatchNotFound implements Exception {
+  const MatchNotFound();
+}
+
+final matchViewProvider =
+    Provider.family<AsyncValue<MatchView>, String>((ref, id) {
+  final m = ref.watch(matchProvider(id));
+  final ev = ref.watch(matchEventsProvider(id));
+  if (m.hasError) {
+    return AsyncValue.error(m.error!, m.stackTrace ?? StackTrace.current);
+  }
+  if (ev.hasError) {
+    return AsyncValue.error(ev.error!, ev.stackTrace ?? StackTrace.current);
+  }
+  if (!m.hasValue || !ev.hasValue) return const AsyncValue.loading();
+  final info = m.value;
+  if (info == null) {
+    return AsyncValue.error(const MatchNotFound(), StackTrace.current);
+  }
+  final events = ev.value!;
+  return AsyncValue.data(
+      MatchView(info, events, const MatchProjector().project(info.format, events)));
+});
+
+final matchControllerProvider =
+    Provider.family<MatchController, String>((ref, id) => MatchController(
+          matchId: id,
+          deviceId: ref.watch(deviceIdProvider),
+          repository: ref.watch(matchRepositoryProvider),
+          clock: ref.watch(clockProvider),
+        ));

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="PISTAK — Matchday made simple. Live match tracking for roller hockey.">
+  <meta name="theme-color" content="#0B0F14">
+
+  <!-- iOS (Safari) home-screen app -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PISTAK">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="manifest" href="manifest.json">
+  <title>PISTAK</title>
+
+  <style>
+    html, body { margin: 0; height: 100%; background: #0B0F14; }
+    #pistak-splash {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: #fff;
+    }
+    #pistak-splash b { font-size: 48px; letter-spacing: 8px; color: #B8F23A; }
+  </style>
+</head>
+<body>
+  <div id="pistak-splash"><b>PISTAK</b><span>Matchday made simple.</span></div>
+
+  <script>
+    // Ask the browser not to evict PISTAK's local database under storage
+    // pressure (best effort; granted automatically for installed PWAs on
+    // most browsers). Match data must never disappear.
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persisted().then(function (already) {
+        if (!already) navigator.storage.persist();
+      });
+    }
+    // Offline app shell (generated at build time by tool/build_web.sh).
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('pistak_sw.js').catch(function (e) {
+          console.warn('PISTAK service worker not registered', e);
+        });
+      });
+    }
+    window.addEventListener('flutter-first-frame', function () {
+      var s = document.getElementById('pistak-splash');
+      if (s) s.remove();
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
