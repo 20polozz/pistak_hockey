@@ -121,9 +121,18 @@ class MatchProjector {
           final team = e.team;
           if (team != null) {
             s.tally(team).goals++;
+            if (e.shotKind != null) {
+              s.tally(team).recordShot(e.shotKind, scored: true);
+            }
           } else {
             s.anomalies.add('GOAL without team ${e.id}');
           }
+        }
+
+      case EventTypes.shot:
+        {
+          final team = e.team;
+          if (team != null) s.tally(team).recordShot(e.shotKind, scored: false);
         }
 
       case EventTypes.foul:

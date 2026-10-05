@@ -302,7 +302,7 @@ class MatchSummaryScreen extends ConsumerWidget {
 
   Widget _stats(AppLocalizations l, MatchView v) {
     final s = v.state;
-    TableRow row(String label, int home, int away, {bool bold = false}) {
+    TableRow row(String label, Object home, Object away, {bool bold = false}) {
       final style = TextStyle(
           fontWeight: bold ? FontWeight.w900 : FontWeight.w600,
           fontFeatures: tabularFigures);
@@ -355,6 +355,16 @@ class MatchSummaryScreen extends ConsumerWidget {
             row(l.statRed, cards(s, TeamSide.home, CardColors.red),
                 cards(s, TeamSide.away, CardColors.red)),
             row(l.statTimeouts, s.home.timeouts, s.away.timeouts),
+            if (s.home.penaltyAttempts + s.away.penaltyAttempts > 0)
+              row(
+                  l.statPenalties,
+                  '${s.home.penaltyScored}/${s.home.penaltyAttempts}',
+                  '${s.away.penaltyScored}/${s.away.penaltyAttempts}'),
+            if (s.home.freeHitAttempts + s.away.freeHitAttempts > 0)
+              row(
+                  l.statFreeHits,
+                  '${s.home.freeHitScored}/${s.home.freeHitAttempts}',
+                  '${s.away.freeHitScored}/${s.away.freeHitAttempts}'),
             if (s.hadShootout)
               row(l.statShootout, s.home.shootoutScored, s.away.shootoutScored,
                   bold: true),

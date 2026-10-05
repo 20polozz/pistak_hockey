@@ -19,6 +19,10 @@ abstract final class EventTypes {
   static const shootoutStart = 'SHOOTOUT_START';
   static const shootoutAttempt = 'SHOOTOUT_ATTEMPT';
 
+  /// In-game penalty / direct free hit that did NOT end in a goal
+  /// (a scored one is a GOAL with metadata shotKind).
+  static const shot = 'SHOT';
+
   /// Events that change the clock / match phase.
   static const clockTypes = {
     matchStart,
@@ -37,6 +41,12 @@ abstract final class CardColors {
   static const yellow = 'yellow';
   static const blue = 'blue';
   static const red = 'red';
+}
+
+/// In-game set-piece shots (metadata shotKind).
+abstract final class ShotKinds {
+  static const penalty = 'penalty';
+  static const freeHit = 'free_hit';
 }
 
 abstract final class ShootoutResults {
@@ -170,6 +180,9 @@ class MatchEvent {
 
   /// The assist question was answered (a player or "none").
   bool get assistAnswered => metadata.containsKey(MetaKeys.assistId);
+
+  /// penalty / free_hit for set-piece goals and missed shots.
+  String? get shotKind => metadata[MetaKeys.shotKind] as String?;
 
   MatchEvent copyWith({
     String? subtype,

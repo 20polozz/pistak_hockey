@@ -260,6 +260,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         2,
         [
           EventButton(
+            label: l.setPiece,
+            icon: Icons.adjust,
+            color: PistakColors.accent,
+            onTap: () => _openSetPieceSheet(l, v),
+          ),
+          EventButton(
             label: l.incident,
             icon: Icons.report_problem_outlined,
             color: PistakColors.incident,
@@ -535,6 +541,33 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   }
 
   // ------------------------------------------------------------ actions
+
+  /// Penalty / direct free hit: team + kind + GOAL/MISSED. The time is the
+  /// moment the button was pressed, not when the result is chosen.
+  Future<void> _openSetPieceSheet(AppLocalizations l, MatchView v) async {
+    final at = ref.read(clockProvider).now();
+    _session.tap();
+    final s = v.state;
+    // After 10 fouls the OTHER team gets a direct free hit: preselect it.
+    TeamSide team = TeamSide.home;
+    String kind = ShotKinds.penalty;
+    if (s.foulLimitReached(TeamSide.home)) {
+      team = TeamSide.away;
+      kind = ShotKinds.freeHit;
+    } else if (s.foulLimitReached(TeamSide.away)) {
+      kind = ShotKinds.freeHit;
+    }
+    final result = await showModalBottomSheet<(TeamSide, String, bool)>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) =>
+          _SetPieceSheet(view: v, initialTeam: team, initialKind: kind),
+    );
+    if (result == null) return;
+    final (side, k, scored) = result;
+    await _run((c) => c.setPiece(side, kind: k, scored: scored, at: at),
+        heavy: scored);
+  }
 
   Future<void> _undo(AppLocalizations l) async {
     _session.tap();
@@ -1057,6 +1090,90 @@ class _Banner extends StatelessWidget {
       );
 }
 
+class _SetPieceSheet extends StatefulWidget {
+  const _SetPieceSheet(
+      {required this.view,
+      required this.initialTeam,
+      required this.initialKind});
+  final MatchView view;
+  final TeamSide initialTeam;
+  final String initialKind;
+
+  @override
+  State<_SetPieceSheet> createState() => _SetPieceSheetState();
+}
+
+class _SetPieceSheetState extends State<_SetPieceSheet> {
+  late TeamSide _team = widget.initialTeam;
+  late String _kind = widget.initialKind;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final info = widget.view.info;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l.setPiece, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            SegmentedButton<TeamSide>(
+              segments: [
+                ButtonSegment(
+                    value: TeamSide.home,
+                    label: Text(teamName(l, info, TeamSide.home),
+                        overflow: TextOverflow.ellipsis)),
+                ButtonSegment(
+                    value: TeamSide.away,
+                    label: Text(teamName(l, info, TeamSide.away),
+                        overflow: TextOverflow.ellipsis)),
+              ],
+              selected: {_team},
+              onSelectionChanged: (v) => setState(() => _team = v.first),
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: [
+                ButtonSegment(value: ShotKinds.penalty, label: Text(l.penalty)),
+                ButtonSegment(value: ShotKinds.freeHit, label: Text(l.freeHit)),
+              ],
+              selected: {_kind},
+              onSelectionChanged: (v) => setState(() => _kind = v.first),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 72,
+              child: Row(children: [
+                Expanded(
+                  child: EventButton(
+                    label: l.shotScored,
+                    icon: Icons.sports_hockey,
+                    color: teamColor(_team),
+                    filled: true,
+                    onTap: () => Navigator.pop(context, (_team, _kind, true)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: EventButton(
+                    label: l.shotMissed,
+                    icon: Icons.cancel_outlined,
+                    color: teamColor(_team),
+                    onTap: () => Navigator.pop(context, (_team, _kind, false)),
+                  ),
+                ),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// After a goal / card with a known team linked to a roster: tap the player
 /// (then, for goals, the assist). Hidden when not applicable or answered.
 class _QuickPlayerRow extends ConsumerWidget {
@@ -1071,7 +1188,8 @@ class _QuickPlayerRow extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final e = event;
     final isGoal = e.type == EventTypes.goal;
-    if (e.isVoided || (!isGoal && e.type != EventTypes.card)) {
+    if (e.isVoided ||
+        (!isGoal && e.type != EventTypes.card && e.type != EventTypes.shot)) {
       return const SizedBox.shrink();
     }
     final teamId = switch (e.team) {

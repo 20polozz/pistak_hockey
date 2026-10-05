@@ -155,6 +155,18 @@ class EventFactory {
   List<MatchEvent> goal(MatchState s, TeamSide team) =>
       [_Action(this, clock.now()).eventAt(s, EventTypes.goal, team: team)];
 
+  /// In-game penalty / direct free hit: a goal (counts in the score) or a
+  /// missed shot. [kind] = ShotKinds.penalty | ShotKinds.freeHit.
+  List<MatchEvent> setPiece(MatchState s, TeamSide team,
+          {required String kind, required bool scored}) =>
+      [
+        _Action(this, clock.now()).eventAt(
+            s, scored ? EventTypes.goal : EventTypes.shot,
+            subtype: scored ? null : ShootoutResults.missed,
+            team: team,
+            metadata: {MetaKeys.shotKind: kind})
+      ];
+
   List<MatchEvent> foul(MatchState s, TeamSide team) =>
       [_Action(this, clock.now()).eventAt(s, EventTypes.foul, team: team)];
 

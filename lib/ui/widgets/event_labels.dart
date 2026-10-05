@@ -39,7 +39,15 @@ String eventLabel(AppLocalizations l, MatchEvent e) {
     case EventTypes.clockAdjust:
       return l.evClockAdjust;
     case EventTypes.goal:
-      return l.evGoal;
+      return switch (e.shotKind) {
+        ShotKinds.penalty => l.goalPenalty,
+        ShotKinds.freeHit => l.goalFreeHit,
+        _ => l.evGoal,
+      };
+    case EventTypes.shot:
+      return e.shotKind == ShotKinds.freeHit
+          ? l.evFreeHitMissed
+          : l.evPenaltyMissed;
     case EventTypes.foul:
       return l.evFoul;
     case EventTypes.card:
@@ -110,6 +118,8 @@ Color cardColor(String? color) => switch (color) {
       );
     case EventTypes.timeoutEnd:
       return (teamColor(e.team), Icons.timer_off_outlined);
+    case EventTypes.shot:
+      return (teamColor(e.team), Icons.cancel_outlined);
     case EventTypes.shootoutAttempt:
       return (
         teamColor(e.team),

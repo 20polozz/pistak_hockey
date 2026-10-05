@@ -34,6 +34,21 @@ class TeamTally {
   final Map<String, int> cards = {};
   int shootoutScored = 0;
   int shootoutAttempts = 0;
+  int penaltyScored = 0;
+  int penaltyAttempts = 0;
+  int freeHitScored = 0;
+  int freeHitAttempts = 0;
+
+  /// Counts an in-game penalty / direct free hit (projector only).
+  void recordShot(String? kind, {required bool scored}) {
+    if (kind == 'penalty') {
+      penaltyAttempts++;
+      if (scored) penaltyScored++;
+    } else if (kind == 'free_hit') {
+      freeHitAttempts++;
+      if (scored) freeHitScored++;
+    }
+  }
 
   int get fouls => foulsByPeriod.values.fold<int>(0, (a, b) => a + b);
   int get timeouts => timeoutsByPeriod.values.fold<int>(0, (a, b) => a + b);

@@ -102,6 +102,11 @@ class MatchController {
   // recording
   Future<List<MatchEvent>> goal(TeamSide team) =>
       _act((f, s) => f.goal(s, team));
+
+  /// [at] = moment the button was pressed (before choosing the result).
+  Future<List<MatchEvent>> setPiece(TeamSide team,
+          {required String kind, required bool scored, DateTime? at}) =>
+      _act((f, s) => f.setPiece(s, team, kind: kind, scored: scored), at: at);
   Future<List<MatchEvent>> foul(TeamSide team) =>
       _act((f, s) => f.foul(s, team));
   Future<List<MatchEvent>> card(String color, {TeamSide? team}) =>
