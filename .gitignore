@@ -38,3 +38,6 @@ secrets/
 
 # Release signing key backup (never commit / never share)
 CLAU_SIGNATURA_NO_COMPARTIR/
+
+# Built APKs ready to share
+APK_PER_COMPARTIR/
