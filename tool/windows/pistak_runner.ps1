@@ -25,6 +25,8 @@ $actions = @{
   'format'   = 'dart format lib test'
   'test'     = 'flutter test'
   'apk'      = 'flutter build apk --release'
+  'aab'      = 'flutter build appbundle --release'
+  'wearrelease' = 'cd wear_os && gradlew.bat bundleRelease --console=plain'
   'apkdebug' = 'flutter build apk --debug'
   'web'      = 'flutter build web --release --no-web-resources-cdn'
   'devices'  = 'flutter devices'

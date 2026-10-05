@@ -102,6 +102,31 @@ git checkout -b feature/<nom>     # treball diari
 - `.gitignore` ja exclou `build/`, `.env`, claus, `*.g.dart` i codi de localització generat.
 - Missatges de commit: `feat:`, `fix:`, `test:`, `docs:`, `refactor:`, `chore:`.
 
+## 8. Publicar a Google Play (signatura)
+
+La clau de publicació és teva: si es perd, no es pot actualitzar l'app. No la puja mai a git
+(`*.jks`, `key.properties` ja són a `.gitignore`).
+
+1. Crear la clau (una sola vegada, a la carpeta `android/app`; `keytool` ve amb Android Studio a
+   `jbr\bin`):
+   ```
+   keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+   ```
+2. Crear `android/key.properties` (fitxer local, no es puja):
+   ```
+   storeFile=upload-keystore.jks
+   storePassword=<la teva contrasenya>
+   keyAlias=upload
+   keyPassword=<la teva contrasenya>
+   ```
+3. Compilar: accions del runner `aab` (mòbil, `build/app/outputs/bundle/release/app-release.aab`) i
+   `wearrelease` (rellotge, `wear_os/app/build/outputs/bundle/release/app-release.aab`).
+   Les dues apps fan servir **la mateixa clau** (requisit perquè el rellotge i el mòbil es parlin).
+4. Sense `key.properties`, les versions *release* es signen amb la clau de depuració (només per
+   provar en local; Google Play les rebutja).
+5. Recomanat: activar *Play App Signing* a la Play Console (Google guarda la clau final i tu només
+   la clau de pujada).
+
 ## Anàlisi estàtica
 
 ```bash

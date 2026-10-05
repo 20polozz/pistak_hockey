@@ -1,7 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// Must be signed with the SAME key as the phone app: reuse android/key.properties.
+val phoneAndroidDir = rootProject.file("../android")
+val keyProps = Properties().apply {
+    val f = File(phoneAndroidDir, "key.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val hasReleaseKey = keyProps.getProperty("storeFile") != null
 
 android {
     namespace = "cat.pistak.wear"
@@ -17,10 +27,23 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                // storeFile in key.properties is relative to android/app (Flutter convention).
+                val path = keyProps.getProperty("storeFile")
+                storeFile = File(path).let { if (it.isAbsolute) it else File(File(phoneAndroidDir, "app"), path) }
+                storePassword = keyProps.getProperty("storePassword")
+                keyAlias = keyProps.getProperty("keyAlias")
+                keyPassword = keyProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (hasReleaseKey) "release" else "debug")
         }
     }
 
