@@ -40,6 +40,24 @@ class TeamDocSource implements DocSyncSource {
   TeamDocSource(this.db);
   final AppDatabase db;
 
+  /// Document form of a row (same JSON as sync and backups).
+  static Map<String, dynamic> toDoc(TeamRow r) => {
+        'id': r.id,
+        'name': r.name,
+        'shortName': r.shortName,
+        'category': r.category,
+        'season': r.season,
+        'crest': r.crest == null ? null : base64Encode(r.crest!),
+        'createdAt': r.createdAt,
+        'updatedAt': r.updatedAt,
+        'revision': r.revision,
+        'deletedAt': r.deletedAt,
+      };
+
+  /// Every row, for full backups.
+  Future<List<Map<String, dynamic>>> all() async =>
+      [for (final r in await db.select(db.teams).get()) toDoc(r)];
+
   @override
   String get key => 'teams';
 
@@ -54,21 +72,7 @@ class TeamDocSource implements DocSyncSource {
           ..orderBy([(t) => OrderingTerm.asc(t.updatedAt)])
           ..limit(limit))
         .get();
-    return [
-      for (final r in rows)
-        {
-          'id': r.id,
-          'name': r.name,
-          'shortName': r.shortName,
-          'category': r.category,
-          'season': r.season,
-          'crest': r.crest == null ? null : base64Encode(r.crest!),
-          'createdAt': r.createdAt,
-          'updatedAt': r.updatedAt,
-          'revision': r.revision,
-          'deletedAt': r.deletedAt,
-        }
-    ];
+    return [for (final r in rows) toDoc(r)];
   }
 
   @override
@@ -110,6 +114,25 @@ class MemberDocSource implements DocSyncSource {
   MemberDocSource(this.db);
   final AppDatabase db;
 
+  /// Document form of a row (same JSON as sync and backups).
+  static Map<String, dynamic> toDoc(TeamMemberRow r) => {
+        'id': r.id,
+        'teamId': r.teamId,
+        'role': r.role,
+        'name': r.name,
+        'number': r.number,
+        'position': r.position,
+        'notes': r.notes,
+        'createdAt': r.createdAt,
+        'updatedAt': r.updatedAt,
+        'revision': r.revision,
+        'deletedAt': r.deletedAt,
+      };
+
+  /// Every row, for full backups.
+  Future<List<Map<String, dynamic>>> all() async =>
+      [for (final r in await db.select(db.teamMembers).get()) toDoc(r)];
+
   @override
   String get key => 'members';
 
@@ -123,22 +146,7 @@ class MemberDocSource implements DocSyncSource {
           ..orderBy([(t) => OrderingTerm.asc(t.updatedAt)])
           ..limit(limit))
         .get();
-    return [
-      for (final r in rows)
-        {
-          'id': r.id,
-          'teamId': r.teamId,
-          'role': r.role,
-          'name': r.name,
-          'number': r.number,
-          'position': r.position,
-          'notes': r.notes,
-          'createdAt': r.createdAt,
-          'updatedAt': r.updatedAt,
-          'revision': r.revision,
-          'deletedAt': r.deletedAt,
-        }
-    ];
+    return [for (final r in rows) toDoc(r)];
   }
 
   @override
@@ -185,6 +193,28 @@ class AudioDocSource implements BlobDocSource {
   AudioDocSource(this.db);
   final AppDatabase db;
 
+  /// Document form of a row (same JSON as sync and backups).
+  static Map<String, dynamic> toDoc(AudioRow r) => {
+        'id': r.id,
+        'matchId': r.matchId,
+        'eventId': r.eventId,
+        'mimeType': r.mimeType,
+        'durationMs': r.durationMs,
+        'sizeBytes': r.sizeBytes,
+        'createdAt': r.createdAt,
+        'updatedAt': r.updatedAt,
+        'transcriptStatus': r.transcriptStatus,
+        'revision': r.revision,
+        'deletedAt': r.deletedAt,
+        // false once the user removed the audio (privacy): the server
+        // deletes its copy too.
+        'hasAudio': r.deletedAt == null,
+      };
+
+  /// Every row, for full backups.
+  Future<List<Map<String, dynamic>>> all() async =>
+      [for (final r in await db.select(db.audioRecordings).get()) toDoc(r)];
+
   @override
   String get key => 'audio';
 
@@ -198,25 +228,7 @@ class AudioDocSource implements BlobDocSource {
           ..orderBy([(a) => OrderingTerm.asc(a.createdAt)])
           ..limit(limit))
         .get();
-    return [
-      for (final r in rows)
-        {
-          'id': r.id,
-          'matchId': r.matchId,
-          'eventId': r.eventId,
-          'mimeType': r.mimeType,
-          'durationMs': r.durationMs,
-          'sizeBytes': r.sizeBytes,
-          'createdAt': r.createdAt,
-          'updatedAt': r.updatedAt,
-          'transcriptStatus': r.transcriptStatus,
-          'revision': r.revision,
-          'deletedAt': r.deletedAt,
-          // false once the user removed the audio (privacy): the server
-          // deletes its copy too.
-          'hasAudio': r.deletedAt == null,
-        }
-    ];
+    return [for (final r in rows) toDoc(r)];
   }
 
   @override

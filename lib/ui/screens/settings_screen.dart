@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/sport_brand.dart';
 import '../../app/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers.dart';
+import '../widgets/backup_tiles.dart';
+import '../widgets/brand.dart';
 import '../widgets/storage_banner.dart';
 import 'account_screen.dart';
 import 'categories_screen.dart';
@@ -52,15 +55,19 @@ class SettingsScreen extends ConsumerWidget {
               option(null, l.languageSystem),
               for (final (code, name) in _languages) option(code, name),
               const Divider(),
-              ListTile(
-                leading: const Icon(Icons.account_circle_outlined),
-                title: Text(l.account),
-                subtitle: Text(ref.watch(accountProvider)?.email ??
-                    (isBackendConfigured ? l.syncLocalOnly : l.savedLocally)),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                    builder: (_) => const AccountScreen())),
-              ),
+              // Accounts only exist in builds with a backend (not the
+              // shareable APK): everything is saved on the phone.
+              if (isBackendConfigured)
+                ListTile(
+                  leading: const Icon(Icons.account_circle_outlined),
+                  title: Text(l.account),
+                  subtitle: Text(
+                      ref.watch(accountProvider)?.email ?? l.syncLocalOnly),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                          builder: (_) => const AccountScreen())),
+                ),
               ListTile(
                 leading: const Icon(Icons.timer_outlined),
                 title: Text(l.categories),
@@ -69,14 +76,32 @@ class SettingsScreen extends ConsumerWidget {
                     builder: (_) => const CategoriesScreen())),
               ),
               const Divider(),
+              const BackupTiles(),
+              const Divider(),
               const StorageInfoTile(),
-              ListTile(
-                title: Text(l.deviceId),
-                subtitle: SelectableText(ref.watch(deviceIdProvider)),
-              ),
-              ListTile(
-                title: const Text('PISTAK'),
-                subtitle: Text('${l.tagline}\n${l.savedLocally}'),
+              const Divider(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const PistakWordmark(size: 28),
+                    const SizedBox(height: 4),
+                    Text(l.sportName,
+                        style: TextStyle(
+                            color: currentBrand.accent,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 2,
+                            fontSize: 12)),
+                    const SizedBox(height: 8),
+                    Text(
+                        l.appVersion(
+                            ref.watch(appVersionProvider).valueOrNull ?? '…'),
+                        style: const TextStyle(color: PistakColors.textMuted)),
+                    Text('${l.tagline} ${l.savedLocally}',
+                        style: const TextStyle(color: PistakColors.textMuted)),
+                  ],
+                ),
               ),
             ],
           ),

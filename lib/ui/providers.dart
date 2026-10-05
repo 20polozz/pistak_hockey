@@ -1,6 +1,9 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
+import '../app/sport_brand.dart';
+import '../services/backup/backup_service.dart';
 import '../wear/wear_bridge.dart';
 
 import '../auth/auth_service.dart';
@@ -229,4 +232,18 @@ final wearBridgeProvider = Provider<WearBridge>((ref) {
   );
   ref.onDispose(bridge.dispose);
   return bridge;
+});
+
+final backupServiceProvider = Provider<BackupService>((ref) => BackupService(
+      db: ref.watch(databaseProvider),
+      matches: ref.watch(matchRepositoryProvider),
+      settings: ref.watch(settingsRepositoryProvider),
+      clock: ref.watch(clockProvider),
+      appName: currentBrand.appName,
+    ));
+
+/// "1.0.0 (1)" from the installed package.
+final appVersionProvider = FutureProvider<String>((ref) async {
+  final info = await PackageInfo.fromPlatform();
+  return '${info.version} (${info.buildNumber})';
 });

@@ -393,6 +393,38 @@
   "statusScheduled": "Scheduled",
   "copyCsv": "Copy CSV to clipboard",
   "sportName": "ROLLER HOCKEY",
+  "backupSection": "Backup",
+  "backupExport": "Save a backup",
+  "backupExportHint": "All matches, teams and recordings in one file. Keep it somewhere safe (Drive, email, WhatsApp to yourself…).",
+  "backupRestore": "Restore a backup",
+  "backupRestoreHint": "Adds the data of a backup file. Nothing on this phone is deleted.",
+  "backupPasswordTitle": "Protect with a password?",
+  "backupPasswordHint": "Optional. Without it, anyone who gets the file can read it. If you forget it, the backup cannot be opened.",
+  "password": "Password",
+  "passwordRepeat": "Repeat password",
+  "passwordsDontMatch": "Passwords do not match",
+  "backupWithoutPassword": "Without password",
+  "backupCreate": "Create backup",
+  "backupEnterPassword": "This backup is protected. Enter its password.",
+  "backupWrongPassword": "Wrong password.",
+  "backupInvalidFile": "This file is not a pistak. backup or it is damaged.",
+  "backupRestored": "Backup restored ({matches} matches).",
+  "@backupRestored": {
+    "placeholders": {
+      "matches": {
+        "type": "int"
+      }
+    }
+  },
+  "backupWorking": "Working…",
+  "appVersion": "Version {version}",
+  "@appVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "storageVolatile": "This browser cannot save data permanently (private mode?). What you record will be LOST when you close the tab. Use the Android app or a normal Chrome/Edge/Firefox window.",
   "storageMayBeEvicted": "The browser may delete local data if the device runs out of space. Sign in to keep a copy in the cloud, or install the app.",
   "storageSection": "Storage on this device",
@@ -406,7 +438,6 @@
   "syncNeedsLogin": "Sign in again",
   "account": "Account",
   "email": "Email",
-  "password": "Password",
   "createAccount": "CREATE ACCOUNT",
   "haveAccount": "I already have an account",
   "noAccountYet": "I don't have an account",
