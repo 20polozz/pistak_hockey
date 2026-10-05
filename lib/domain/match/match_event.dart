@@ -67,6 +67,9 @@ abstract final class MetaKeys {
   static const regularPeriods = 'regular';
   static const playerId = 'playerId';
   static const playerName = 'playerName';
+  static const assistId = 'assistId'; // '' = explicitly "no assist"
+  static const assistName = 'assistName';
+  static const shotKind = 'shotKind'; // penalty | freeHit (in-game shots)
   static const transcriptStatus = 'transcriptStatus';
 }
 
@@ -161,6 +164,12 @@ class MatchEvent {
 
   /// Optional player added after the fact (snapshot of the label).
   String? get playerName => metadata[MetaKeys.playerName] as String?;
+
+  /// Goal assist (player label), if any.
+  String? get assistName => metadata[MetaKeys.assistName] as String?;
+
+  /// The assist question was answered (a player or "none").
+  bool get assistAnswered => metadata.containsKey(MetaKeys.assistId);
 
   MatchEvent copyWith({
     String? subtype,

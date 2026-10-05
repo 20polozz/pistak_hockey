@@ -7,6 +7,7 @@ import '../../domain/match/event_factory.dart';
 import '../../domain/match/match_event.dart';
 import '../../domain/match/match_state.dart';
 import '../../domain/sport/sports.dart';
+import '../../domain/team/team.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/match_session_service.dart';
 import '../match_controller.dart';
@@ -490,7 +491,20 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         ],
       ),
     );
-    if (!needsTeam) return bar;
+    if (!needsTeam) {
+      // Optional: who scored / assisted / got the card, one tap, inline.
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _QuickPlayerRow(
+            event: last,
+            view: v,
+            onPick: (changes) => _run((c) => c.setMeta(last, changes)),
+          ),
+          bar,
+        ],
+      );
+    }
     // One-tap card: optional team assignment right below, never blocking.
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1039,6 +1053,95 @@ class _Banner extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      );
+}
+
+/// After a goal / card with a known team linked to a roster: tap the player
+/// (then, for goals, the assist). Hidden when not applicable or answered.
+class _QuickPlayerRow extends ConsumerWidget {
+  const _QuickPlayerRow(
+      {required this.event, required this.view, required this.onPick});
+  final MatchEvent event;
+  final MatchView view;
+  final void Function(Map<String, Object?> changes) onPick;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final e = event;
+    final isGoal = e.type == EventTypes.goal;
+    if (e.isVoided || (!isGoal && e.type != EventTypes.card)) {
+      return const SizedBox.shrink();
+    }
+    final teamId = switch (e.team) {
+      TeamSide.home => view.info.homeTeamId,
+      TeamSide.away => view.info.awayTeamId,
+      null => null,
+    };
+    if (teamId == null) return const SizedBox.shrink();
+    final players = (ref.watch(teamMembersProvider(teamId)).valueOrNull ??
+            const <TeamMember>[])
+        .where((m) =>
+            m.role == MemberRole.player || m.role == MemberRole.goalkeeper)
+        .toList()
+      ..sort((a, b) => (a.number ?? 999).compareTo(b.number ?? 999));
+    if (players.isEmpty) return const SizedBox.shrink();
+
+    final scorerId = e.metadata[MetaKeys.playerId] as String?;
+    final askAssist = isGoal && scorerId != null && !e.assistAnswered;
+    if (scorerId != null && !askAssist) return const SizedBox.shrink();
+
+    final question = scorerId == null
+        ? (isGoal ? l.whoScored : l.whichPlayer)
+        : l.whoAssisted;
+    final color = teamColor(e.team!);
+    final chips = <Widget>[
+      if (askAssist)
+        _chip(l.noAssist, PistakColors.textMuted,
+            () => onPick({MetaKeys.assistId: '', MetaKeys.assistName: null})),
+      for (final m in players)
+        if (m.id != scorerId)
+          _chip(m.label, color, () {
+            onPick(askAssist
+                ? {MetaKeys.assistId: m.id, MetaKeys.assistName: m.label}
+                : {MetaKeys.playerId: m.id, MetaKeys.playerName: m.label});
+          }),
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Text(question,
+              style:
+                  const TextStyle(fontSize: 13, color: PistakColors.textMuted)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: chips,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String label, Color color, VoidCallback onTap) => Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            foregroundColor: color,
+            side: BorderSide(color: color),
+          ),
+          onPressed: onTap,
+          child:
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
         ),
       );
 }

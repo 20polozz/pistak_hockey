@@ -40,7 +40,8 @@ List<Widget> buildTimelineTiles(
           ? null
           : [
               teamName(l, v.info, e.team!),
-              if (e.playerName != null) e.playerName!
+              if (e.playerName != null) e.playerName!,
+              if (e.assistName != null) '${l.assist}: ${e.assistName}',
             ].join(' · '),
       score: score,
       voidedLabel: e.isVoided ? l.voided : null,
@@ -231,38 +232,46 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
   String? _timeError;
   late String? _playerId = e.metadata[MetaKeys.playerId] as String?;
   late String? _playerName = e.playerName;
+  late String? _assistId = switch (e.metadata[MetaKeys.assistId]) {
+    final String v when v.isNotEmpty => v,
+    _ => null,
+  };
+  late String? _assistName = e.assistName;
 
-  /// Optional: only shown when the event's side is linked to one of the
-  /// user's teams that has players.
-  Widget _playerPicker(AppLocalizations l) {
+  List<TeamMember> _players() {
     final info = widget.view.info;
     final teamId = switch (_team) {
       TeamSide.home => info.homeTeamId,
       TeamSide.away => info.awayTeamId,
       null => null,
     };
-    if (teamId == null) return const SizedBox.shrink();
-    final members = (ref.watch(teamMembersProvider(teamId)).valueOrNull ??
+    if (teamId == null) return const [];
+    return (ref.watch(teamMembersProvider(teamId)).valueOrNull ??
             const <TeamMember>[])
         .where((m) =>
             m.role == MemberRole.player || m.role == MemberRole.goalkeeper)
         .toList();
+  }
+
+  /// Optional: only shown when the event's side is linked to one of the
+  /// user's teams that has players.
+  Widget _memberPicker(String label, String emptyLabel, String? selected,
+      void Function(String? id, String? name) onChanged) {
+    final members = _players();
     if (members.isEmpty) return const SizedBox.shrink();
-    final value = members.any((m) => m.id == _playerId) ? _playerId : null;
+    final value = members.any((m) => m.id == selected) ? selected : null;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: DropdownButtonFormField<String?>(
         initialValue: value,
-        decoration: InputDecoration(labelText: l.player),
+        decoration: InputDecoration(labelText: label),
         items: [
-          DropdownMenuItem<String?>(value: null, child: Text(l.noPlayer)),
+          DropdownMenuItem<String?>(value: null, child: Text(emptyLabel)),
           for (final m in members)
             DropdownMenuItem<String?>(value: m.id, child: Text(m.label)),
         ],
-        onChanged: (id) => setState(() {
-          _playerId = id;
-          _playerName = members.where((m) => m.id == id).firstOrNull?.label;
-        }),
+        onChanged: (id) => setState(() =>
+            onChanged(id, members.where((m) => m.id == id).firstOrNull?.label)),
       ),
     );
   }
@@ -317,7 +326,15 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
               onSelectionChanged: (s) => setState(() => _team = s.first),
             ),
             const SizedBox(height: 16),
-            _playerPicker(l),
+            _memberPicker(l.player, l.noPlayer, _playerId, (id, name) {
+              _playerId = id;
+              _playerName = name;
+            }),
+            if (e.type == EventTypes.goal)
+              _memberPicker(l.assist, l.noAssist, _assistId, (id, name) {
+                _assistId = id;
+                _assistName = name;
+              }),
           ],
           if (!_isClock) ...[
             TextField(
@@ -380,6 +397,14 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
     } else {
       meta[MetaKeys.playerId] = _playerId;
       meta[MetaKeys.playerName] = _playerName;
+    }
+    if (e.type == EventTypes.goal && _players().isNotEmpty) {
+      meta[MetaKeys.assistId] = _assistId ?? '';
+      if (_assistName == null) {
+        meta.remove(MetaKeys.assistName);
+      } else {
+        meta[MetaKeys.assistName] = _assistName;
+      }
     }
     var subtype = e.subtype;
     if (e.type == EventTypes.incident) {

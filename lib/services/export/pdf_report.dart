@@ -212,7 +212,10 @@ class PdfReportExporter {
                   l.eventLabel(x.event),
                   if (x.event.team == TeamSide.home) l.home,
                   if (x.event.team == TeamSide.away) l.away,
-                  if (x.event.playerName != null) x.event.playerName!,
+                  if (x.event.playerName != null)
+                    x.event.assistName == null
+                        ? x.event.playerName!
+                        : '${x.event.playerName!} (${x.event.assistName})',
                 ].join(' · ').replaceAll(' · ', ' - ')),
                 x.event.type == EventTypes.goal
                     ? '${x.homeScore}-${x.awayScore}'

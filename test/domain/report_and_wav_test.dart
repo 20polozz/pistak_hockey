@@ -78,7 +78,7 @@ void main() {
       final rows = const LineSplitter().convert(csv);
       expect(rows.first, CsvReportExporter.header.join(','));
       expect(rows.length, 5);
-      expect(rows[3], startsWith('03:42,1,GOAL,,home,,1,0,'));
+      expect(rows[3], startsWith('03:42,1,GOAL,,home,,,1,0,'));
       expect(csv, contains('"Pista mullada, ""aturada"", 2 min"'));
     });
 

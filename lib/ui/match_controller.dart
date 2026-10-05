@@ -169,6 +169,19 @@ class MatchController {
   Future<void> setTeam(MatchEvent e, TeamSide? team) => _serial(() =>
       repository.updateEvent(e.copyWith(team: team, clearTeam: team == null)));
 
+  /// Sets (or clears with null) metadata keys of an event, e.g. the player.
+  /// Re-reads the stored event first so concurrent edits aren't lost.
+  Future<void> setMeta(MatchEvent e, Map<String, Object?> changes) =>
+      _serial(() async {
+        final current = (await repository.getEvents(e.matchId))
+                .where((x) => x.id == e.id)
+                .firstOrNull ??
+            e;
+        final meta = Map<String, dynamic>.of(current.metadata);
+        changes.forEach((k, v) => v == null ? meta.remove(k) : meta[k] = v);
+        await repository.updateEvent(current.copyWith(metadata: meta));
+      });
+
   Future<void> updateEvent(MatchEvent e) =>
       _serial(() => repository.updateEvent(e));
 
