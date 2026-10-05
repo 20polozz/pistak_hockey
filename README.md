@@ -13,7 +13,7 @@ Arquitectura preparada per a altres esports de pista.
 
 | Fase | Contingut | Estat |
 |------|-----------|-------|
-| 1 — Core | Offline-first, partit sense títol, cronòmetre, esdeveniments, temps morts (inici/fi), incidències escrites i **de veu**, cronologia editable, desfer, autosave, recuperació, categories configurables, export CSV/JSON | ✅ Compila (Android + Web), 44 tests en verd |
+| 1 — Core | Offline-first, partit sense títol, cronòmetre, esdeveniments, temps morts (inici/fi), incidències escrites i **de veu**, cronologia editable, desfer, autosave, recuperació, categories configurables, export CSV/JSON | ✅ Android + Web verificats (emulador i navegador), 44 tests en verd |
 | 2 — Comptes i núvol | Registre, login, equips, partits programats, backend, sincronització | Preparada (contractes `RemoteSyncApi`, `AuthService`, outbox) |
 | 3 — Informes | PDF, estadístiques avançades | Resum + export CSV/JSON fets; falta PDF |
 | 4 — Àudio | Speech-to-Text real (backend) | Gravació local + cua de transcripció ja fetes; falta el servei |

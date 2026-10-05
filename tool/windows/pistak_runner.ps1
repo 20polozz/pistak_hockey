@@ -37,6 +37,7 @@ $actions = @{
   'screencap' = 'adb -s'
   'tap'       = 'adb -s'
   'launchapp' = 'adb -s'
+  'killemu'   = 'taskkill /F /IM qemu-system-x86_64.exe /T'
 }
 $adb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
 

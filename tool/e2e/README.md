@@ -21,3 +21,11 @@ timeout start/end, half-time, 2nd half (starts at 25:00), written and voice inci
 playback), end of match, summary, timeline, match details edit, language switch (ca/es/en,
 persisted), responsive tablet layout, and **full offline**: app reload with no network (service
 worker), new match recorded offline, reload → "Partit en curs" with all events (OPFS storage).
+
+## Android (emulator, 2026-10-05)
+
+Release APK installed on `Medium_Phone_API_37.0` through the runner (`install`, `launchapp`,
+`tap`, `screencap`): onboarding, new match, start, goals, foul, timeout start/end, voice incident
+(microphone permission prompt, recording, stored with the time of the tap), timeline. Then the
+**emulator process was killed** (power-loss simulation) and cold-booted: the app showed
+"Match in progress" and restored the exact state (paused at 00:16, timeout running, 2-0).
