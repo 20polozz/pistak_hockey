@@ -115,57 +115,62 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: LayoutBuilder(builder: (context, c) {
-          final banner =
-              _Banner(view: v, onEndTimeout: () => _run((c) => c.endTimeout()));
-          // Tablets / desktop browsers in landscape: info left, buttons right.
-          if (c.maxWidth >= 900 && c.maxWidth > c.maxHeight) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    width: 380,
-                    child: Column(
-                      children: [
-                        _Scoreboard(view: v),
-                        banner,
-                        const Spacer(),
-                        _controls(l, v),
-                        const SizedBox(height: 8),
-                        _lastEventBar(l, v),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(child: _grid(l, v)),
-                ],
-              ),
-            );
-          }
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                child: Column(
+      // Glanceable live screen made of already-huge elements: follows the
+      // system text size up to 1.5× so everything still fits one screen.
+      body: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.5,
+        child: SafeArea(
+          child: LayoutBuilder(builder: (context, c) {
+            final banner = _Banner(
+                view: v, onEndTimeout: () => _run((c) => c.endTimeout()));
+            // Tablets / desktop browsers in landscape: info left, buttons right.
+            if (c.maxWidth >= 900 && c.maxWidth > c.maxHeight) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _Scoreboard(view: v),
-                    banner,
-                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: 380,
+                      child: Column(
+                        children: [
+                          _Scoreboard(view: v),
+                          banner,
+                          const Spacer(),
+                          _controls(l, v),
+                          const SizedBox(height: 8),
+                          _lastEventBar(l, v),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
                     Expanded(child: _grid(l, v)),
-                    const SizedBox(height: 8),
-                    _controls(l, v),
-                    const SizedBox(height: 8),
-                    _lastEventBar(l, v),
                   ],
                 ),
+              );
+            }
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: Column(
+                    children: [
+                      _Scoreboard(view: v),
+                      banner,
+                      const SizedBox(height: 8),
+                      Expanded(child: _grid(l, v)),
+                      const SizedBox(height: 8),
+                      _controls(l, v),
+                      const SizedBox(height: 8),
+                      _lastEventBar(l, v),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -805,31 +810,35 @@ class _Scoreboard extends StatelessWidget {
         children: [
           TickerBuilder(builder: (context, now) {
             final over = s.isOvertimeAt(now);
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (s.phase == MatchPhase.paused)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: Icon(Icons.pause_circle_filled,
-                        color: PistakColors.warning, size: 32),
+            // Huge clock: shrinks to fit narrow screens / large system text.
+            return FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (s.phase == MatchPhase.paused)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 8),
+                      child: Icon(Icons.pause_circle_filled,
+                          color: PistakColors.warning, size: 32),
+                    ),
+                  Text(
+                    formatMatchTime(s.matchTimeAt(now)),
+                    semanticsLabel: formatMatchTime(s.matchTimeAt(now)),
+                    style: TextStyle(
+                      fontSize: 64,
+                      height: 1.0,
+                      fontWeight: FontWeight.w900,
+                      fontFeatures: tabularFigures,
+                      color: over
+                          ? PistakColors.warning
+                          : s.isClockRunning
+                              ? Colors.white
+                              : PistakColors.textMuted,
+                    ),
                   ),
-                Text(
-                  formatMatchTime(s.matchTimeAt(now)),
-                  semanticsLabel: formatMatchTime(s.matchTimeAt(now)),
-                  style: TextStyle(
-                    fontSize: 64,
-                    height: 1.0,
-                    fontWeight: FontWeight.w900,
-                    fontFeatures: tabularFigures,
-                    color: over
-                        ? PistakColors.warning
-                        : s.isClockRunning
-                            ? Colors.white
-                            : PistakColors.textMuted,
-                  ),
-                ),
-              ],
+                ],
+              ),
             );
           }),
           const SizedBox(height: 2),
@@ -947,12 +956,16 @@ class _TeamScore extends StatelessWidget {
           child: Icon(Icons.warning_amber_rounded,
               size: 13, color: color, semanticLabel: l.foulLimitReached),
         ),
-      Text(
-        '${l.foulsShort} $fouls · ${l.timeoutsShort} ${t.timeoutsIn(period)}',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: reached || near ? FontWeight.w800 : FontWeight.w400,
-          color: color,
+      // Wraps (instead of overflowing) with large system text.
+      Flexible(
+        child: Text(
+          '${l.foulsShort} $fouls · ${l.timeoutsShort} ${t.timeoutsIn(period)}',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: reached || near ? FontWeight.w800 : FontWeight.w400,
+            color: color,
+          ),
         ),
       ),
     ]);
