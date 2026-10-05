@@ -31,3 +31,6 @@ android/app/upload-keystore.jks
 **/service-account*.json
 credentials/
 secrets/
+
+# Local build runner
+.runner/

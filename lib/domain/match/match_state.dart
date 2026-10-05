@@ -30,8 +30,8 @@ class TeamTally {
   final Map<int, int> timeoutsByPeriod = {};
   final Map<String, int> cards = {};
 
-  int get fouls => foulsByPeriod.values.fold(0, (a, b) => a + b);
-  int get timeouts => timeoutsByPeriod.values.fold(0, (a, b) => a + b);
+  int get fouls => foulsByPeriod.values.fold<int>(0, (a, b) => a + b);
+  int get timeouts => timeoutsByPeriod.values.fold<int>(0, (a, b) => a + b);
   int foulsIn(int period) => foulsByPeriod[period] ?? 0;
   int timeoutsIn(int period) => timeoutsByPeriod[period] ?? 0;
   int cardsOf(String color) => cards[color] ?? 0;
@@ -95,9 +95,9 @@ class MatchState {
   bool get isLastPeriod => period >= format.periods;
 
   int get totalCards =>
-      home.cards.values.fold(0, (a, b) => a + b) +
-      away.cards.values.fold(0, (a, b) => a + b) +
-      unassignedCards.values.fold(0, (a, b) => a + b);
+      home.cards.values.fold<int>(0, (a, b) => a + b) +
+      away.cards.values.fold<int>(0, (a, b) => a + b) +
+      unassignedCards.values.fold<int>(0, (a, b) => a + b);
 
   int cardsOfColor(String color) =>
       home.cardsOf(color) + away.cardsOf(color) + (unassignedCards[color] ?? 0);

@@ -203,7 +203,7 @@ class MatchSummaryScreen extends ConsumerWidget {
     int cards(MatchState st, TeamSide side, String color) =>
         st.tally(side).cardsOf(color);
 
-    final unassigned = s.unassignedCards.values.fold(0, (a, b) => a + b);
+    final unassigned = s.unassignedCards.values.fold<int>(0, (a, b) => a + b);
     return Column(
       children: [
         Table(
