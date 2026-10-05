@@ -34,13 +34,13 @@ class MatchSummaryScreen extends ConsumerWidget {
               icon: const Icon(Icons.ios_share),
               onSelected: (exporter) async {
                 final v = view.valueOrNull!;
-                final text = exporter
-                    .export(MatchReport.build(v.info, v.events));
+                final text =
+                    exporter.export(MatchReport.build(v.info, v.events));
                 await Clipboard.setData(ClipboardData(text: text));
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(
-                          l.exportCopied(exporter.id.toUpperCase()))));
+                      content:
+                          Text(l.exportCopied(exporter.id.toUpperCase()))));
                 }
               },
               itemBuilder: (_) => [
@@ -173,12 +173,18 @@ class MatchSummaryScreen extends ConsumerWidget {
       (l.fieldSeason, i.season),
       (l.fieldVenue, i.venue),
       (l.date, formatDate(i.displayDate)),
-      (l.startTime,
-          s.matchStartedAt == null ? null : formatClockTime(s.matchStartedAt!)),
-      (l.endTime,
-          s.matchEndedAt == null ? null : formatClockTime(s.matchEndedAt!)),
-      (l.duration,
-          s.realDuration == null ? null : formatMatchTime(s.realDuration!)),
+      (
+        l.startTime,
+        s.matchStartedAt == null ? null : formatClockTime(s.matchStartedAt!)
+      ),
+      (
+        l.endTime,
+        s.matchEndedAt == null ? null : formatClockTime(s.matchEndedAt!)
+      ),
+      (
+        l.duration,
+        s.realDuration == null ? null : formatMatchTime(s.realDuration!)
+      ),
       (l.fieldFormat, i.format.name),
       (l.fieldNotes, i.notes),
     ];
@@ -259,8 +265,7 @@ class MatchSummaryScreen extends ConsumerWidget {
                 cards(s, TeamSide.away, CardColors.red)),
             row(l.statTimeouts, s.home.timeouts, s.away.timeouts),
             if (s.hadShootout)
-              row(l.statShootout, s.home.shootoutScored,
-                  s.away.shootoutScored,
+              row(l.statShootout, s.home.shootoutScored, s.away.shootoutScored,
                   bold: true),
           ],
         ),

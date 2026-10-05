@@ -32,6 +32,8 @@ class MatchInfo {
     this.status = MatchStatus.notStarted,
     this.homeName,
     this.awayName,
+    this.homeTeamId,
+    this.awayTeamId,
     this.category,
     this.competition,
     this.venue,
@@ -57,6 +59,11 @@ class MatchInfo {
   final MatchStatus status;
   final String? homeName;
   final String? awayName;
+
+  /// Optional links to the user's teams (names are still stored, so a match
+  /// stays readable even if the team is deleted later).
+  final String? homeTeamId;
+  final String? awayTeamId;
   final String? category;
   final String? competition;
   final String? venue;
@@ -87,6 +94,10 @@ class MatchInfo {
     MatchStatus? status,
     String? homeName,
     String? awayName,
+    String? homeTeamId,
+    String? awayTeamId,
+    bool clearHomeTeam = false,
+    bool clearAwayTeam = false,
     String? category,
     String? competition,
     String? venue,
@@ -110,6 +121,8 @@ class MatchInfo {
         status: status ?? this.status,
         homeName: homeName ?? this.homeName,
         awayName: awayName ?? this.awayName,
+        homeTeamId: clearHomeTeam ? null : (homeTeamId ?? this.homeTeamId),
+        awayTeamId: clearAwayTeam ? null : (awayTeamId ?? this.awayTeamId),
         category: category ?? this.category,
         competition: competition ?? this.competition,
         venue: venue ?? this.venue,
@@ -137,6 +150,8 @@ class MatchInfo {
         'status': status.code,
         'homeName': homeName,
         'awayName': awayName,
+        'homeTeamId': homeTeamId,
+        'awayTeamId': awayTeamId,
         'category': category,
         'competition': competition,
         'venue': venue,

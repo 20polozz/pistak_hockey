@@ -112,6 +112,7 @@ class MatchState {
   bool get isFinished => phase == MatchPhase.finished;
   bool get isInPlay =>
       phase == MatchPhase.running || phase == MatchPhase.paused;
+
   /// True from the last regulation period on (overtime included).
   bool get isLastPeriod => period >= format.periods;
   bool get isOvertime => format.isOvertimePeriod(period);
@@ -126,7 +127,8 @@ class MatchState {
       period <= 0 ? Duration.zero : completedPlayed + periodElapsedAt(now);
 
   /// Exclusions still running at [now], with their remaining time.
-  List<(Exclusion, Duration)> activeExclusionsAt(DateTime now, {TeamSide? team}) {
+  List<(Exclusion, Duration)> activeExclusionsAt(DateTime now,
+      {TeamSide? team}) {
     final played = playedAt(now);
     return [
       for (final x in exclusions)

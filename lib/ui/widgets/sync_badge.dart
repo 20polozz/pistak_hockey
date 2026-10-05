@@ -28,16 +28,28 @@ class SyncBadge extends ConsumerWidget {
             ? (snap.data ?? SyncState.idle)
             : SyncState.localOnly;
         final (color, icon, text) = switch (state) {
-          SyncState.localOnly =>
-            (PistakColors.textMuted, Icons.smartphone, l.syncLocalOnly),
+          SyncState.localOnly => (
+              PistakColors.textMuted,
+              Icons.smartphone,
+              l.syncLocalOnly
+            ),
           SyncState.idle => pending == 0
               ? (PistakColors.synced, Icons.cloud_done_outlined, l.syncSynced)
-              : (PistakColors.syncing, Icons.cloud_upload_outlined,
-                  l.pendingEvents(pending)),
-          SyncState.syncing =>
-            (PistakColors.syncing, Icons.sync, l.syncSyncing),
-          SyncState.offline =>
-            (PistakColors.offline, Icons.cloud_off_outlined, l.syncOffline),
+              : (
+                  PistakColors.syncing,
+                  Icons.cloud_upload_outlined,
+                  l.pendingEvents(pending)
+                ),
+          SyncState.syncing => (
+              PistakColors.syncing,
+              Icons.sync,
+              l.syncSyncing
+            ),
+          SyncState.offline => (
+              PistakColors.offline,
+              Icons.cloud_off_outlined,
+              l.syncOffline
+            ),
         };
         return Tooltip(
           message: text,

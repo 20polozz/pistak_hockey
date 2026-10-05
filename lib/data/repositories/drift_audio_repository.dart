@@ -17,24 +17,25 @@ class DriftAudioRepository implements AudioRepository {
   int get _now => clock.now().millisecondsSinceEpoch;
 
   @override
-  Future<void> save(AudioRecording r) =>
-      db.into(db.audioRecordings).insertOnConflictUpdate(AudioRecordingsCompanion(
-            id: Value(r.id),
-            matchId: Value(r.matchId),
-            eventId: Value(r.eventId),
-            mimeType: Value(r.mimeType),
-            durationMs: Value(r.duration.inMilliseconds),
-            sizeBytes: Value(r.sizeBytes),
-            bytes: Value(r.bytes),
-            createdAt: Value(r.createdAt.millisecondsSinceEpoch),
-            updatedAt: Value(r.updatedAt.millisecondsSinceEpoch),
-            transcriptStatus: Value(r.transcriptStatus.code),
-            attempts: Value(r.attempts),
-            lastError: Value(r.lastError),
-            revision: Value(r.revision),
-            syncStatus: Value(r.syncStatus.code),
-            deletedAt: Value(r.deletedAt?.millisecondsSinceEpoch),
-          ));
+  Future<void> save(AudioRecording r) => db
+      .into(db.audioRecordings)
+      .insertOnConflictUpdate(AudioRecordingsCompanion(
+        id: Value(r.id),
+        matchId: Value(r.matchId),
+        eventId: Value(r.eventId),
+        mimeType: Value(r.mimeType),
+        durationMs: Value(r.duration.inMilliseconds),
+        sizeBytes: Value(r.sizeBytes),
+        bytes: Value(r.bytes),
+        createdAt: Value(r.createdAt.millisecondsSinceEpoch),
+        updatedAt: Value(r.updatedAt.millisecondsSinceEpoch),
+        transcriptStatus: Value(r.transcriptStatus.code),
+        attempts: Value(r.attempts),
+        lastError: Value(r.lastError),
+        revision: Value(r.revision),
+        syncStatus: Value(r.syncStatus.code),
+        deletedAt: Value(r.deletedAt?.millisecondsSinceEpoch),
+      ));
 
   @override
   Future<AudioRecording?> get(String id, {bool withBytes = true}) async {
@@ -45,13 +46,12 @@ class DriftAudioRepository implements AudioRepository {
   }
 
   @override
-  Stream<List<AudioRecording>> watchByMatch(String matchId) =>
-      (db.select(db.audioRecordings)
-            ..where((a) => a.matchId.equals(matchId))
-            ..orderBy([(a) => OrderingTerm.asc(a.createdAt)]))
-          .watch()
-          .map((rows) =>
-              rows.map((r) => _fromRow(r, withBytes: false)).toList());
+  Stream<List<AudioRecording>> watchByMatch(String matchId) => (db
+          .select(db.audioRecordings)
+        ..where((a) => a.matchId.equals(matchId))
+        ..orderBy([(a) => OrderingTerm.asc(a.createdAt)]))
+      .watch()
+      .map((rows) => rows.map((r) => _fromRow(r, withBytes: false)).toList());
 
   @override
   Future<List<AudioRecording>> pendingTranscriptions({int limit = 20}) async {

@@ -64,7 +64,8 @@ String eventLabel(AppLocalizations l, MatchEvent e) {
 
 /// Number of regulation periods, stored on period events by the factory
 /// (metadata 'regular'); 2 when unknown.
-int _regular(MatchEvent e) => (e.metadata[MetaKeys.regularPeriods] as num?)?.toInt() ?? 2;
+int _regular(MatchEvent e) =>
+    (e.metadata[MetaKeys.regularPeriods] as num?)?.toInt() ?? 2;
 
 String teamName(AppLocalizations l, MatchInfo info, TeamSide side) {
   final name = side == TeamSide.home ? info.homeName : info.awayName;

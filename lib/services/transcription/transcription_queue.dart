@@ -2,7 +2,8 @@ import '../../domain/repositories/audio_repository.dart';
 import 'transcription_service.dart';
 
 class TranscriptionReport {
-  const TranscriptionReport({this.done = 0, this.errors = 0, this.skipped = false});
+  const TranscriptionReport(
+      {this.done = 0, this.errors = 0, this.skipped = false});
   final int done;
   final int errors;
   final bool skipped;

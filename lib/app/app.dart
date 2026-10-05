@@ -28,8 +28,7 @@ class _PistakAppState extends ConsumerState<PistakApp> {
     // Background work that never blocks recording: pending transcriptions
     // (and, from Phase 2, the cloud sync engine).
     _tick();
-    _background =
-        Timer.periodic(const Duration(minutes: 2), (_) => _tick());
+    _background = Timer.periodic(const Duration(minutes: 2), (_) => _tick());
   }
 
   void _tick() {
@@ -68,9 +67,8 @@ class _PistakAppState extends ConsumerState<PistakApp> {
         }
         return const Locale('ca');
       },
-      home: widget.onboardingDone
-          ? const HomeScreen()
-          : const OnboardingScreen(),
+      home:
+          widget.onboardingDone ? const HomeScreen() : const OnboardingScreen(),
     );
   }
 }

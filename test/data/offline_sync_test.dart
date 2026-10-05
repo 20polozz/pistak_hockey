@@ -213,8 +213,8 @@ void main() {
     final clock = FakeClock(DateTime.utc(2026, 10, 12, 18, 30));
     final app = AppProcess(file, clock, FakeServer());
     await app.boot();
-    final m = await app.repo
-        .createMatch(sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final m = await app.repo.createMatch(
+        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
     expect(m.status, MatchStatus.notStarted);
     expect(m.isUntitled, isTrue);
 
@@ -237,8 +237,8 @@ void main() {
     final clock = FakeClock(DateTime.utc(2026, 10, 12, 18, 30));
     final app = AppProcess(file, clock, FakeServer());
     await app.boot();
-    final m = await app.repo
-        .createMatch(sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final m = await app.repo.createMatch(
+        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
     final c = app.controller(m.id);
     await c.startMatch();
     clock.advance(const Duration(minutes: 1));
@@ -262,8 +262,8 @@ void main() {
     final server = FakeServer();
     final app = AppProcess(file, clock, server);
     await app.boot();
-    final m = await app.repo
-        .createMatch(sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final m = await app.repo.createMatch(
+        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
     final c = app.controller(m.id);
     final card = (await c.card(CardColors.red)).single;
 
@@ -287,8 +287,8 @@ void main() {
     final clock = FakeClock(DateTime.utc(2026, 10, 12, 18, 30));
     final app = AppProcess(file, clock, FakeServer());
     await app.boot();
-    final m = await app.repo
-        .createMatch(sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final m = await app.repo.createMatch(
+        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
     final goal = (await app.controller(m.id).goal(TeamSide.away)).single;
     await app.repo.appendEvents(m.id, [goal.copyWith(seq: 0)]);
     final events = await app.repo.getEvents(m.id);

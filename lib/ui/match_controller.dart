@@ -53,7 +53,8 @@ class MatchController {
 
   Future<List<MatchEvent>> _act(
       List<MatchEvent> Function(EventFactory f, MatchState s) build,
-      {DateTime? at, Future<void> Function(List<MatchEvent> events)? before}) {
+      {DateTime? at,
+      Future<void> Function(List<MatchEvent> events)? before}) {
     final tapTime = at ?? clock.now();
     return _serial(() async {
       final state = await currentState();
@@ -101,7 +102,9 @@ class MatchController {
 
   /// [at] = moment the user pressed INCIDÈNCIA (before typing/recording).
   Future<List<MatchEvent>> incident(String kind,
-          {String? text, DateTime? at, Map<String, dynamic> extra = const {}}) =>
+          {String? text,
+          DateTime? at,
+          Map<String, dynamic> extra = const {}}) =>
       _act((f, s) => f.incident(s, kind: kind, text: text, extra: extra),
           at: at);
 

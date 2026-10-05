@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../core/time_format.dart';
 import '../../domain/audio/audio_recording.dart';
+import '../../domain/team/team.dart';
 import '../../domain/match/match_event.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers.dart';
@@ -35,7 +36,12 @@ List<Widget> buildTimelineTiles(
       event: e,
       note: pendingTranscript ? l.transcriptPending : null,
       title: eventLabel(l, e),
-      team: e.team == null ? null : teamName(l, v.info, e.team!),
+      team: e.team == null
+          ? null
+          : [
+              teamName(l, v.info, e.team!),
+              if (e.playerName != null) e.playerName!
+            ].join(' · '),
       score: score,
       voidedLabel: e.isVoided ? l.voided : null,
       onTap: onTap == null ? null : () => onTap(e),
@@ -223,6 +229,43 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
       TextEditingController(text: formatMatchTime(widget.event.matchTime));
   late final _text = TextEditingController(text: widget.event.text ?? '');
   String? _timeError;
+  late String? _playerId = e.metadata[MetaKeys.playerId] as String?;
+  late String? _playerName = e.playerName;
+
+  /// Optional: only shown when the event's side is linked to one of the
+  /// user's teams that has players.
+  Widget _playerPicker(AppLocalizations l) {
+    final info = widget.view.info;
+    final teamId = switch (_team) {
+      TeamSide.home => info.homeTeamId,
+      TeamSide.away => info.awayTeamId,
+      null => null,
+    };
+    if (teamId == null) return const SizedBox.shrink();
+    final members = (ref.watch(teamMembersProvider(teamId)).valueOrNull ??
+            const <TeamMember>[])
+        .where((m) =>
+            m.role == MemberRole.player || m.role == MemberRole.goalkeeper)
+        .toList();
+    if (members.isEmpty) return const SizedBox.shrink();
+    final value = members.any((m) => m.id == _playerId) ? _playerId : null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DropdownButtonFormField<String?>(
+        initialValue: value,
+        decoration: InputDecoration(labelText: l.player),
+        items: [
+          DropdownMenuItem<String?>(value: null, child: Text(l.noPlayer)),
+          for (final m in members)
+            DropdownMenuItem<String?>(value: m.id, child: Text(m.label)),
+        ],
+        onChanged: (id) => setState(() {
+          _playerId = id;
+          _playerName = members.where((m) => m.id == id).firstOrNull?.label;
+        }),
+      ),
+    );
+  }
 
   MatchEvent get e => widget.event;
 
@@ -274,6 +317,7 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
               onSelectionChanged: (s) => setState(() => _team = s.first),
             ),
             const SizedBox(height: 16),
+            _playerPicker(l),
           ],
           if (!_isClock) ...[
             TextField(
@@ -330,6 +374,13 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
       return;
     }
     final meta = Map<String, dynamic>.of(e.metadata);
+    if (_playerId == null) {
+      meta.remove(MetaKeys.playerId);
+      meta.remove(MetaKeys.playerName);
+    } else {
+      meta[MetaKeys.playerId] = _playerId;
+      meta[MetaKeys.playerName] = _playerName;
+    }
     var subtype = e.subtype;
     if (e.type == EventTypes.incident) {
       final t = _text.text.trim();
@@ -434,8 +485,8 @@ class _AudioControlsState extends ConsumerState<_AudioControls> {
         ]),
         if (status != null)
           Text(status,
-              style: const TextStyle(
-                  fontSize: 12, color: PistakColors.textMuted)),
+              style:
+                  const TextStyle(fontSize: 12, color: PistakColors.textMuted)),
       ],
     );
   }

@@ -124,8 +124,8 @@ void main() {
 
       sim.waitMs(6, 39);
       final end = sim.run((f, s) => f.endPeriod(s));
-      expect(end.map((e) => e.type),
-          [EventTypes.periodEnd, EventTypes.matchEnd]);
+      expect(
+          end.map((e) => e.type), [EventTypes.periodEnd, EventTypes.matchEnd]);
       expect(formatMatchTime(end.last.matchTime), '50:00');
 
       final st = sim.state;
@@ -186,7 +186,8 @@ void main() {
       final sim = Sim();
       sim.run((f, s) => f.startMatch(s));
       sim.waitMs(10);
-      sim.run((f, s) => f.adjustClock(s, const Duration(minutes: 9, seconds: 30)));
+      sim.run(
+          (f, s) => f.adjustClock(s, const Duration(minutes: 9, seconds: 30)));
       expect(sim.shown, '09:30');
       sim.waitMs(1);
       expect(sim.shown, '10:30');
@@ -222,8 +223,8 @@ void main() {
       sim.run((f, s) => f.startMatch(s));
       sim.waitMs(12, 14);
       final ev = sim.run((f, s) => f.timeout(s, TeamSide.home));
-      expect(ev.map((e) => e.type),
-          [EventTypes.timeout, EventTypes.clockPause]);
+      expect(
+          ev.map((e) => e.type), [EventTypes.timeout, EventTypes.clockPause]);
       expect(ev.first.actionId, ev.last.actionId);
       expect(ev.last.subtype, PauseReasons.timeout);
       sim.waitMs(0, 20);
@@ -231,8 +232,8 @@ void main() {
       expect(st.phase, MatchPhase.paused);
       expect(st.home.timeoutsIn(1), 1);
       expect(st.activeTimeout?.team, TeamSide.home);
-      expect(st.timeoutRemainingAt(sim.clock.now()),
-          const Duration(seconds: 40));
+      expect(
+          st.timeoutRemainingAt(sim.clock.now()), const Duration(seconds: 40));
       expect(sim.shown, '12:14');
       sim.run((f, s) => f.resume(s));
       expect(sim.state.activeTimeout, isNull);
@@ -240,7 +241,8 @@ void main() {
 
     test('timeout does not touch the clock when configured so', () {
       final sim = Sim(
-          format: rollerHockey.defaultFormat.copyWith(stopClockOnTimeout: false));
+          format:
+              rollerHockey.defaultFormat.copyWith(stopClockOnTimeout: false));
       sim.run((f, s) => f.startMatch(s));
       final ev = sim.run((f, s) => f.timeout(s, TeamSide.away));
       expect(ev.single.type, EventTypes.timeout);
@@ -271,7 +273,8 @@ void main() {
 
     test('end of timeout without clock stop only closes the timeout', () {
       final sim = Sim(
-          format: rollerHockey.defaultFormat.copyWith(stopClockOnTimeout: false));
+          format:
+              rollerHockey.defaultFormat.copyWith(stopClockOnTimeout: false));
       sim.run((f, s) => f.startMatch(s));
       sim.run((f, s) => f.timeout(s, TeamSide.home));
       expect(sim.state.activeTimeout, isNotNull);
@@ -427,8 +430,8 @@ void main() {
       final sim = Sim();
       sim.run((f, s) => f.startMatch(s));
       final e = sim
-          .run((f, s) =>
-              f.incident(s, kind: IncidentKinds.text, text: 'Patins'))
+          .run(
+              (f, s) => f.incident(s, kind: IncidentKinds.text, text: 'Patins'))
           .single;
       final back = MatchEvent.fromJson(e.toJson());
       expect(back.toJson(), e.toJson());

@@ -34,7 +34,10 @@ void main() {
   group('Reports', () {
     final clock = FakeClock(DateTime.utc(2026, 10, 12, 16, 30));
     final f = EventFactory(
-        matchId: 'm1', deviceId: 'd1', clock: clock, ids: SequentialIdGenerator());
+        matchId: 'm1',
+        deviceId: 'd1',
+        clock: clock,
+        ids: SequentialIdGenerator());
     final events = <MatchEvent>[];
     void run(List<MatchEvent> Function() c) => events.addAll(c());
     final info = MatchInfo(
@@ -70,18 +73,18 @@ void main() {
     });
 
     test('CSV export escapes text and has one row per event', () {
-      final csv = const CsvReportExporter().export(MatchReport.build(info, events));
+      final csv =
+          const CsvReportExporter().export(MatchReport.build(info, events));
       final rows = const LineSplitter().convert(csv);
       expect(rows.first, CsvReportExporter.header.join(','));
       expect(rows.length, 5);
-      expect(rows[3], startsWith('03:42,1,GOAL,,home,1,0,'));
+      expect(rows[3], startsWith('03:42,1,GOAL,,home,,1,0,'));
       expect(csv, contains('"Pista mullada, ""aturada"", 2 min"'));
     });
 
     test('JSON export is valid and complete', () {
-      final json = jsonDecode(
-              const JsonReportExporter().export(MatchReport.build(info, events)))
-          as Map<String, dynamic>;
+      final json = jsonDecode(const JsonReportExporter()
+          .export(MatchReport.build(info, events))) as Map<String, dynamic>;
       expect(json['format'], 'pistak.match.v1');
       expect((json['events'] as List).length, 4);
       expect(json['stats']['home']['goals'], 1);

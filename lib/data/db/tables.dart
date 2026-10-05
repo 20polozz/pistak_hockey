@@ -17,6 +17,10 @@ class Matches extends Table {
 
   TextColumn get homeName => text().nullable()();
   TextColumn get awayName => text().nullable()();
+
+  /// Optional links to the user's teams (schema v3).
+  TextColumn get homeTeamId => text().nullable()();
+  TextColumn get awayTeamId => text().nullable()();
   TextColumn get category => text().nullable()();
   TextColumn get competition => text().nullable()();
   TextColumn get venue => text().nullable()();
@@ -35,8 +39,7 @@ class Matches extends Table {
   TextColumn get deviceId => text()();
   TextColumn get ownerUserId => text().nullable()();
   IntColumn get revision => integer().withDefault(const Constant(1))();
-  TextColumn get syncStatus =>
-      text().withDefault(const Constant('pending'))();
+  TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
   IntColumn get deletedAt => integer().nullable()();
 
   @override
@@ -66,10 +69,8 @@ class MatchEvents extends Table {
   IntColumn get seq => integer()();
   IntColumn get revision => integer().withDefault(const Constant(1))();
   IntColumn get voidedAt => integer().nullable()();
-  TextColumn get syncStatus =>
-      text().withDefault(const Constant('pending'))();
-  TextColumn get metadataJson =>
-      text().withDefault(const Constant('{}'))();
+  TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+  TextColumn get metadataJson => text().withDefault(const Constant('{}'))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -104,8 +105,45 @@ class AudioRecordings extends Table {
   IntColumn get attempts => integer().withDefault(const Constant(0))();
   TextColumn get lastError => text().nullable()();
   IntColumn get revision => integer().withDefault(const Constant(1))();
-  TextColumn get syncStatus =>
-      text().withDefault(const Constant('pending'))();
+  TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+  IntColumn get deletedAt => integer().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+@DataClassName('TeamRow')
+class Teams extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get shortName => text().nullable()();
+  TextColumn get category => text().nullable()();
+  TextColumn get season => text().nullable()();
+  BlobColumn get crest => blob().nullable()();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
+  IntColumn get revision => integer().withDefault(const Constant(1))();
+  TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+  IntColumn get deletedAt => integer().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+@DataClassName('TeamMemberRow')
+@TableIndex(name: 'idx_members_team', columns: {#teamId})
+class TeamMembers extends Table {
+  TextColumn get id => text()();
+  TextColumn get teamId => text()();
+  TextColumn get role => text()();
+  TextColumn get name => text()();
+  IntColumn get number => integer().nullable()();
+  TextColumn get position => text().nullable()();
+  TextColumn get notes => text().nullable()();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
+  IntColumn get revision => integer().withDefault(const Constant(1))();
+  TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
   IntColumn get deletedAt => integer().nullable()();
 
   @override

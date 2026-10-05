@@ -109,26 +109,27 @@ void main() {
     final r =
         await TranscriptionQueue(audio: audio, service: stt).processPending();
     expect(r.done, 1);
-    final stored = (await matches.getEvents(matchId))
-        .firstWhere((x) => x.id == e.id);
+    final stored =
+        (await matches.getEvents(matchId)).firstWhere((x) => x.id == e.id);
     expect(stored.text, 'Tarjeta azul al número 8 visitante por protestar');
     expect(stored.revision, 2);
     expect(stored.syncStatus, SyncStatus.pending);
     expect(await audio.pendingTranscriptions(), isEmpty);
     // Running again does nothing.
-    expect((await TranscriptionQueue(audio: audio, service: stt)
-            .processPending())
-        .done, 0);
+    expect(
+        (await TranscriptionQueue(audio: audio, service: stt).processPending())
+            .done,
+        0);
   });
 
   test('a text typed by the user is never overwritten by STT', () async {
     final stt = FakeStt()..online = true;
     final e = await recordVoice();
-    await c.updateEvent(e.copyWith(
-        metadata: {...e.metadata, MetaKeys.text: 'Escrit a mà'}));
+    await c.updateEvent(
+        e.copyWith(metadata: {...e.metadata, MetaKeys.text: 'Escrit a mà'}));
     await TranscriptionQueue(audio: audio, service: stt).processPending();
-    final stored = (await matches.getEvents(matchId))
-        .firstWhere((x) => x.id == e.id);
+    final stored =
+        (await matches.getEvents(matchId)).firstWhere((x) => x.id == e.id);
     expect(stored.text, 'Escrit a mà');
   });
 

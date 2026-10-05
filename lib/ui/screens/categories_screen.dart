@@ -115,8 +115,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       TextEditingController(text: '${base.timeoutsPerTeamPerPeriod}');
   late final _excl =
       TextEditingController(text: '${base.exclusionDuration.inMinutes}');
-  late final _foulLimit =
-      TextEditingController(text: '${base.foulLimit ?? 0}');
+  late final _foulLimit = TextEditingController(text: '${base.foulLimit ?? 0}');
   late final _otPeriods =
       TextEditingController(text: '${base.overtimePeriods}');
   late final _otMinutes =
@@ -147,8 +146,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
               child: TextField(
                 controller: _name,
                 autofocus: true,
-                decoration:
-                    InputDecoration(labelText: l.categoryName, errorText: _error),
+                decoration: InputDecoration(
+                    labelText: l.categoryName, errorText: _error),
               ),
             ),
             num(_periods, l.formatPeriods),
@@ -215,8 +214,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
             ? null
             : read(_foulLimit, base.foulLimit ?? 0, 0),
         overtimePeriods: read(_otPeriods, base.overtimePeriods, 0),
-        overtimeDuration:
-            Duration(minutes: read(_otMinutes, base.overtimeDuration.inMinutes, 1)),
+        overtimeDuration: Duration(
+            minutes: read(_otMinutes, base.overtimeDuration.inMinutes, 1)),
         allowShootout: _shootout,
       ),
     );

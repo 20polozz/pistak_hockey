@@ -7,13 +7,20 @@ import '../../domain/match/match_info.dart';
 import '../../domain/sport/match_format.dart';
 import '../../domain/sport/sports.dart';
 import '../../l10n/app_localizations.dart';
+import '../../domain/team/team.dart';
 import '../providers.dart';
+import '../widgets/team_crest.dart';
 
 /// Complete or edit the match information at any moment (before, during or
 /// after the match). Never touches the events.
 class MatchDetailsScreen extends ConsumerStatefulWidget {
-  const MatchDetailsScreen({super.key, required this.matchId});
+  const MatchDetailsScreen(
+      {super.key, required this.matchId, this.discardIfNotSaved = false});
   final String matchId;
+
+  /// True for a match just created by "Programar partit": leaving without
+  /// saving removes the empty draft instead of leaving junk in the list.
+  final bool discardIfNotSaved;
 
   @override
   ConsumerState<MatchDetailsScreen> createState() => _MatchDetailsScreenState();
@@ -37,9 +44,12 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
   final _otPeriods = TextEditingController();
   bool _shootout = false;
   DateTime? _scheduledAt;
+  String? _homeTeamId;
+  String? _awayTeamId;
   late MatchFormat _format;
   bool _stopOnTimeout = true;
   bool _saving = false;
+  bool _saved = false;
 
   static const _customId = 'custom';
 
@@ -50,7 +60,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
   }
 
   Future<void> _load() async {
-    final info = await ref.read(matchRepositoryProvider).getMatch(widget.matchId);
+    final info =
+        await ref.read(matchRepositoryProvider).getMatch(widget.matchId);
     if (!mounted || info == null) return;
     setState(() {
       _info = info;
@@ -62,6 +73,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
       _season.text = info.season ?? '';
       _notes.text = info.notes ?? '';
       _scheduledAt = info.scheduledAt ?? info.startedAt;
+      _homeTeamId = info.homeTeamId;
+      _awayTeamId = info.awayTeamId;
       _setFormat(info.format);
     });
   }
@@ -82,9 +95,20 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
   @override
   void dispose() {
     for (final c in [
-      _home, _away, _category, _competition, _venue, _season, _notes,
-      _periods, _minutes, _breakMinutes, _timeoutSeconds, _timeoutsPerPeriod,
-      _foulLimit, _otPeriods,
+      _home,
+      _away,
+      _category,
+      _competition,
+      _venue,
+      _season,
+      _notes,
+      _periods,
+      _minutes,
+      _breakMinutes,
+      _timeoutSeconds,
+      _timeoutsPerPeriod,
+      _foulLimit,
+      _otPeriods,
     ]) {
       c.dispose();
     }
@@ -95,35 +119,94 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final info = _info;
-    return Scaffold(
-      appBar: AppBar(title: Text(l.matchDetails)),
-      body: info == null
-          ? const Center(child: CircularProgressIndicator())
-          : Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _field(_home, l.fieldHomeTeam),
-                    _field(_away, l.fieldAwayTeam),
-                    _field(_category, l.fieldCategory),
-                    _field(_competition, l.fieldCompetition),
-                    _field(_venue, l.fieldVenue),
-                    _field(_season, l.fieldSeason),
-                    _dateTile(l),
-                    _field(_notes, l.fieldNotes, maxLines: 4),
-                    const SizedBox(height: 8),
-                    _formatSection(l, info),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _saving ? null : () => _save(l),
-                      child: Text(l.save),
-                    ),
-                  ],
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop && widget.discardIfNotSaved && !_saved) {
+          ref.read(matchRepositoryProvider).deleteMatch(widget.matchId);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(title: Text(l.matchDetails)),
+        body: info == null
+            ? const Center(child: CircularProgressIndicator())
+            : Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _teamField(l, home: true),
+                      _teamField(l, home: false),
+                      _field(_category, l.fieldCategory),
+                      _field(_competition, l.fieldCompetition),
+                      _field(_venue, l.fieldVenue),
+                      _field(_season, l.fieldSeason),
+                      _dateTile(l),
+                      _field(_notes, l.fieldNotes, maxLines: 4),
+                      const SizedBox(height: 8),
+                      _formatSection(l, info),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: _saving ? null : () => _save(l),
+                        child: Text(l.save),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+      ),
+    );
+  }
+
+  /// Free text name + optional link to one of "Els meus equips".
+  Widget _teamField(AppLocalizations l, {required bool home}) {
+    final ctrl = home ? _home : _away;
+    final linkedId = home ? _homeTeamId : _awayTeamId;
+    final teams = ref.watch(teamsProvider).valueOrNull ?? const <Team>[];
+    Team? linked;
+    for (final t in teams) {
+      if (t.id == linkedId) linked = t;
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: ctrl,
+        textCapitalization: TextCapitalization.words,
+        onChanged: (_) {
+          // Editing the name by hand unlinks the team.
+          if (linkedId != null && ctrl.text != linked?.name) {
+            setState(() => home ? _homeTeamId = null : _awayTeamId = null);
+          }
+        },
+        decoration: InputDecoration(
+          labelText: home ? l.fieldHomeTeam : l.fieldAwayTeam,
+          prefixIcon: linked == null
+              ? null
+              : Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: TeamCrest(team: linked, size: 28)),
+          suffixIcon: teams.isEmpty
+              ? null
+              : PopupMenuButton<String>(
+                  tooltip: l.pickTeam,
+                  icon: const Icon(Icons.groups_outlined),
+                  onSelected: (id) => setState(() {
+                    final t = teams.where((x) => x.id == id).firstOrNull;
+                    if (home) {
+                      _homeTeamId = t?.id;
+                    } else {
+                      _awayTeamId = t?.id;
+                    }
+                    if (t != null) ctrl.text = t.name;
+                  }),
+                  itemBuilder: (_) => [
+                    PopupMenuItem<String>(value: '', child: Text(l.unlinkTeam)),
+                    for (final t in teams)
+                      PopupMenuItem<String>(value: t.id, child: Text(t.name)),
+                  ],
+                ),
+        ),
+      ),
     );
   }
 
@@ -147,8 +230,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         leading: const Icon(Icons.event),
         title: Text(l.fieldDate),
-        subtitle: Text(
-            d == null ? '—' : '${formatDate(d)}  ${formatClockTime(d)}'),
+        subtitle:
+            Text(d == null ? '—' : '${formatDate(d)}  ${formatClockTime(d)}'),
         onTap: _pickDate,
       ),
     );
@@ -215,8 +298,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
                   selected: isCustom,
                   onSelected: locked
                       ? null
-                      : (_) => setState(() => _format =
-                          _format.copyWith(id: _customId, name: l.formatCustom)),
+                      : (_) => setState(() => _format = _format.copyWith(
+                          id: _customId, name: l.formatCustom)),
                 ),
               ],
             ),
@@ -226,12 +309,11 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
                 Expanded(child: _numField(_periods, l.formatPeriods, locked)),
                 const SizedBox(width: 8),
                 Expanded(
-                    child:
-                        _numField(_minutes, l.formatPeriodMinutes, locked)),
+                    child: _numField(_minutes, l.formatPeriodMinutes, locked)),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: _numField(
-                        _breakMinutes, l.formatBreakMinutes, locked)),
+                    child:
+                        _numField(_breakMinutes, l.formatBreakMinutes, locked)),
               ]),
               const SizedBox(height: 8),
               Row(children: [
@@ -240,8 +322,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
                         _timeoutSeconds, l.formatTimeoutSeconds, locked)),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: _numField(_timeoutsPerPeriod,
-                        l.formatTimeoutsPerPeriod, locked)),
+                    child: _numField(
+                        _timeoutsPerPeriod, l.formatTimeoutsPerPeriod, locked)),
               ]),
               const SizedBox(height: 8),
               Row(children: [
@@ -249,15 +331,14 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
                     child: _numField(_foulLimit, l.formatFoulLimit, locked)),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: _numField(
-                        _otPeriods, l.formatOvertimePeriods, locked)),
+                    child:
+                        _numField(_otPeriods, l.formatOvertimePeriods, locked)),
               ]),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(l.formatAllowShootout),
                 value: _shootout,
-                onChanged:
-                    locked ? null : (v) => setState(() => _shootout = v),
+                onChanged: locked ? null : (v) => setState(() => _shootout = v),
               ),
             ],
             SwitchListTile(
@@ -321,6 +402,10 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
     final format = locked ? info.format : _resolvedFormat();
     final updated = info.copyWith(
       homeName: _home.text,
+      homeTeamId: _homeTeamId,
+      awayTeamId: _awayTeamId,
+      clearHomeTeam: _homeTeamId == null,
+      clearAwayTeam: _awayTeamId == null,
       awayName: _away.text,
       category: _category.text,
       competition: _competition.text,
@@ -332,6 +417,7 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
       format: format,
     );
     await ref.read(matchRepositoryProvider).saveMatchDetails(updated);
+    _saved = true;
     if (!locked) {
       await ref.read(settingsRepositoryProvider).setLastFormat(format);
     }

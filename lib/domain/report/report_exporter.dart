@@ -30,6 +30,7 @@ class CsvReportExporter implements ReportExporter {
     'type',
     'subtype',
     'team',
+    'player',
     'score_home',
     'score_away',
     'timestamp_utc',
@@ -48,6 +49,7 @@ class CsvReportExporter implements ReportExporter {
         e.type,
         e.subtype ?? '',
         e.team?.code ?? '',
+        e.playerName ?? '',
         '${l.homeScore}',
         '${l.awayScore}',
         e.timestamp.toUtc().toIso8601String(),
@@ -59,8 +61,10 @@ class CsvReportExporter implements ReportExporter {
   }
 
   static String _cell(String v) {
-    final needsQuotes =
-        v.contains(',') || v.contains('"') || v.contains('\n') || v.contains('\r');
+    final needsQuotes = v.contains(',') ||
+        v.contains('"') ||
+        v.contains('\n') ||
+        v.contains('\r');
     final escaped = v.replaceAll('"', '""');
     return needsQuotes ? '"$escaped"' : escaped;
   }

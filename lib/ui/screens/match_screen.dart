@@ -100,22 +100,25 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           PopupMenuButton<_MenuAction>(
             onSelected: (a) => _onMenu(a, l, v),
             itemBuilder: (_) => [
-              PopupMenuItem(value: _MenuAction.details, child: Text(l.matchDetails)),
-              PopupMenuItem(value: _MenuAction.timeline, child: Text(l.timeline)),
+              PopupMenuItem(
+                  value: _MenuAction.details, child: Text(l.matchDetails)),
+              PopupMenuItem(
+                  value: _MenuAction.timeline, child: Text(l.timeline)),
               if (v.state.period > 0 && !v.state.isFinished)
                 PopupMenuItem(
                     value: _MenuAction.adjustClock, child: Text(l.adjustClock)),
               PopupMenuItem(value: _MenuAction.summary, child: Text(l.summary)),
               if (v.state.isStarted && !v.state.isFinished)
-                PopupMenuItem(value: _MenuAction.endMatch, child: Text(l.endMatch)),
+                PopupMenuItem(
+                    value: _MenuAction.endMatch, child: Text(l.endMatch)),
             ],
           ),
         ],
       ),
       body: SafeArea(
         child: LayoutBuilder(builder: (context, c) {
-          final banner = _Banner(
-              view: v, onEndTimeout: () => _run((c) => c.endTimeout()));
+          final banner =
+              _Banner(view: v, onEndTimeout: () => _run((c) => c.endTimeout()));
           // Tablets / desktop browsers in landscape: info left, buttons right.
           if (c.maxWidth >= 900 && c.maxWidth > c.maxHeight) {
             return Padding(
@@ -180,69 +183,84 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         '${s.tally(side).timeoutsIn(period)}/$maxTo';
 
     final rows = <(int, List<Widget>)>[
-      (3, [
-        EventButton(
-          label: l.goalHome,
-          icon: Icons.sports_hockey,
-          color: PistakColors.home,
-          filled: true,
-          onTap: () => _run((c) => c.goal(TeamSide.home), heavy: true),
-        ),
-        EventButton(
-          label: l.goalAway,
-          icon: Icons.sports_hockey,
-          color: PistakColors.away,
-          filled: true,
-          onTap: () => _run((c) => c.goal(TeamSide.away), heavy: true),
-        ),
-      ]),
-      (2, [
-        EventButton(
-          label: l.foulHome,
-          icon: Icons.front_hand,
-          color: PistakColors.home,
-          onTap: () => _run((c) => c.foul(TeamSide.home)),
-        ),
-        EventButton(
-          label: l.foulAway,
-          icon: Icons.front_hand,
-          color: PistakColors.away,
-          onTap: () => _run((c) => c.foul(TeamSide.away)),
-        ),
-      ]),
-      (2, [
-        for (final color in sport.cardColors)
+      (
+        3,
+        [
           EventButton(
-            label: _cardLabel(l, color),
-            icon: Icons.style,
-            color: cardColor(color),
-            onTap: () => _run((c) => c.card(color)),
+            label: l.goalHome,
+            icon: Icons.sports_hockey,
+            color: PistakColors.home,
+            filled: true,
+            onTap: () => _run((c) => c.goal(TeamSide.home), heavy: true),
           ),
-      ]),
-      (2, [
-        EventButton(
-          label: l.timeoutHome,
-          sublabel: toLabel(TeamSide.home),
-          icon: Icons.timer_outlined,
-          color: PistakColors.home,
-          onTap: () => _run((c) => c.timeout(TeamSide.home)),
-        ),
-        EventButton(
-          label: l.timeoutAway,
-          sublabel: toLabel(TeamSide.away),
-          icon: Icons.timer_outlined,
-          color: PistakColors.away,
-          onTap: () => _run((c) => c.timeout(TeamSide.away)),
-        ),
-      ]),
-      (2, [
-        EventButton(
-          label: l.incident,
-          icon: Icons.report_problem_outlined,
-          color: PistakColors.incident,
-          onTap: () => _openIncidentSheet(l),
-        ),
-      ]),
+          EventButton(
+            label: l.goalAway,
+            icon: Icons.sports_hockey,
+            color: PistakColors.away,
+            filled: true,
+            onTap: () => _run((c) => c.goal(TeamSide.away), heavy: true),
+          ),
+        ]
+      ),
+      (
+        2,
+        [
+          EventButton(
+            label: l.foulHome,
+            icon: Icons.front_hand,
+            color: PistakColors.home,
+            onTap: () => _run((c) => c.foul(TeamSide.home)),
+          ),
+          EventButton(
+            label: l.foulAway,
+            icon: Icons.front_hand,
+            color: PistakColors.away,
+            onTap: () => _run((c) => c.foul(TeamSide.away)),
+          ),
+        ]
+      ),
+      (
+        2,
+        [
+          for (final color in sport.cardColors)
+            EventButton(
+              label: _cardLabel(l, color),
+              icon: Icons.style,
+              color: cardColor(color),
+              onTap: () => _run((c) => c.card(color)),
+            ),
+        ]
+      ),
+      (
+        2,
+        [
+          EventButton(
+            label: l.timeoutHome,
+            sublabel: toLabel(TeamSide.home),
+            icon: Icons.timer_outlined,
+            color: PistakColors.home,
+            onTap: () => _run((c) => c.timeout(TeamSide.home)),
+          ),
+          EventButton(
+            label: l.timeoutAway,
+            sublabel: toLabel(TeamSide.away),
+            icon: Icons.timer_outlined,
+            color: PistakColors.away,
+            onTap: () => _run((c) => c.timeout(TeamSide.away)),
+          ),
+        ]
+      ),
+      (
+        2,
+        [
+          EventButton(
+            label: l.incident,
+            icon: Icons.report_problem_outlined,
+            color: PistakColors.incident,
+            onTap: () => _openIncidentSheet(l),
+          ),
+        ]
+      ),
     ];
 
     Widget row(List<Widget> children) => Row(
@@ -317,8 +335,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               label: l.penaltyMissed,
               icon: Icons.cancel_outlined,
               color: color,
-              onTap: () =>
-                  _run((c) => c.shootoutAttempt(side, scored: false)),
+              onTap: () => _run((c) => c.shootoutAttempt(side, scored: false)),
             ),
           ),
         ],
@@ -382,8 +399,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         return Row(children: [
           Expanded(
               flex: 3,
-              child: primary(l.pauseMatch, Icons.pause,
-                  () => _run((c) => c.pause()),
+              child: primary(
+                  l.pauseMatch, Icons.pause, () => _run((c) => c.pause()),
                   color: PistakColors.warning)),
           const SizedBox(width: 8),
           Expanded(flex: 2, child: secondary(endLabel, confirmEnd)),
@@ -405,7 +422,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         }
         // After regulation: overtime and/or shoot-out if the format allows.
         final next = s.canPlayOvertime
-            ? primary(l.startOvertime(s.period + 1 - s.format.periods),
+            ? primary(
+                l.startOvertime(s.period + 1 - s.format.periods),
                 Icons.play_arrow,
                 () => _run((c) => c.startNextPeriod(), heavy: true))
             : primary(l.endMatch, Icons.flag, () => _confirmEndMatch(l));
@@ -433,7 +451,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Text(l.tapStartHint,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: PistakColors.textMuted, fontSize: 13)),
+            style:
+                const TextStyle(color: PistakColors.textMuted, fontSize: 13)),
       );
     }
     final (color, icon) = eventVisual(last);
@@ -538,15 +557,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           ),
           if (canOvertime)
             SimpleDialogOption(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               onPressed: () => Navigator.pop(ctx, PeriodEndChoice.overtime),
               child: Text(l.optOvertime),
             ),
           if (canShootout)
             SimpleDialogOption(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               onPressed: () => Navigator.pop(ctx, PeriodEndChoice.shootout),
               child: Text(l.optShootout),
             ),
@@ -687,8 +704,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(l.cancel)),
+              onPressed: () => Navigator.pop(ctx), child: Text(l.cancel)),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text),
               child: Text(l.save)),
@@ -717,8 +733,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             ),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l.cancel)),
+                  onPressed: () => Navigator.pop(ctx), child: Text(l.cancel)),
               FilledButton(
                 onPressed: () {
                   final d = parseMatchTime(ctrl.text);
@@ -753,8 +768,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     }
   }
 
-  void _open(Widget screen) =>
-      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+  void _open(Widget screen) => Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => screen));
 }
 
 // ---------------------------------------------------------------- widgets
@@ -833,6 +848,12 @@ class _Scoreboard extends StatelessWidget {
               Expanded(child: _TeamScore(view: view, side: TeamSide.away)),
             ],
           ),
+          if (s.hadShootout)
+            Text(l.shootoutScore(s.home.shootoutScored, s.away.shootoutScored),
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: PistakColors.accent)),
         ],
       ),
     );
@@ -868,10 +889,6 @@ class _TeamScore extends StatelessWidget {
               fontWeight: FontWeight.w900,
               fontFeatures: tabularFigures),
         ),
-        if (s.hadShootout)
-          Text(l.shootoutScore(s.home.shootoutScored, s.away.shootoutScored),
-              style: const TextStyle(
-                  fontSize: 12, color: PistakColors.accent)),
         _foulsLine(l, s, t, period),
         // Blue-card exclusions: countdown of played time, never colour-only.
         TickerBuilder(
@@ -893,11 +910,16 @@ class _TeamScore extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: PistakColors.blueCard),
                     ),
-                    child: Text('⏱ ${formatMatchTime(left)}',
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            fontFeatures: tabularFigures)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.timer_outlined,
+                          size: 12, color: PistakColors.blueCard),
+                      const SizedBox(width: 3),
+                      Text(formatMatchTime(left),
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              fontFeatures: tabularFigures)),
+                    ]),
                   ),
               ],
             );
@@ -907,27 +929,33 @@ class _TeamScore extends StatelessWidget {
     );
   }
 
-  Widget _foulsLine(
-      AppLocalizations l, MatchState s, TeamTally t, int period) {
+  Widget _foulsLine(AppLocalizations l, MatchState s, TeamTally t, int period) {
     final limit = s.format.foulLimit;
     final reached = s.foulLimitReached(side);
     final near = s.foulLimitNear(side);
-    final fouls = limit == null
-        ? '${t.foulsIn(period)}'
-        : '${t.foulsIn(period)}/$limit';
-    return Text(
-      '${l.foulsShort} $fouls${reached ? ' ⚠' : ''} · ${l.timeoutsShort} ${t.timeoutsIn(period)}',
-      semanticsLabel: reached ? l.foulLimitReached : null,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: reached || near ? FontWeight.w800 : FontWeight.w400,
-        color: reached
-            ? PistakColors.danger
-            : near
-                ? PistakColors.warning
-                : PistakColors.textMuted,
+    final fouls =
+        limit == null ? '${t.foulsIn(period)}' : '${t.foulsIn(period)}/$limit';
+    final color = reached
+        ? PistakColors.danger
+        : near
+            ? PistakColors.warning
+            : PistakColors.textMuted;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      if (reached)
+        Padding(
+          padding: const EdgeInsets.only(right: 3),
+          child: Icon(Icons.warning_amber_rounded,
+              size: 13, color: color, semanticLabel: l.foulLimitReached),
+        ),
+      Text(
+        '${l.foulsShort} $fouls · ${l.timeoutsShort} ${t.timeoutsIn(period)}',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: reached || near ? FontWeight.w800 : FontWeight.w400,
+          color: color,
+        ),
       ),
-    );
+    ]);
   }
 }
 

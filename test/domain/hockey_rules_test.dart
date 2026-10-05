@@ -106,8 +106,10 @@ void main() {
     test('last period → overtime break → OT1 starts at 20:00', () {
       final sim = Sim(format: short);
       playRegulation(sim);
-      final end = sim.run((f, s) => f.endPeriod(s, then: PeriodEndChoice.overtime));
-      expect(end.map((e) => e.type), [EventTypes.periodEnd, EventTypes.breakStart]);
+      final end =
+          sim.run((f, s) => f.endPeriod(s, then: PeriodEndChoice.overtime));
+      expect(end.map((e) => e.type),
+          [EventTypes.periodEnd, EventTypes.breakStart]);
       expect(end.first.metadata[MetaKeys.regularPeriods], 2);
       sim.waitMs(2);
       final ot = sim.run((f, s) => f.startNextPeriod(s)).single;

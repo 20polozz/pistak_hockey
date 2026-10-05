@@ -65,6 +65,8 @@ abstract final class MetaKeys {
   static const forced = 'forced';
   static const audioId = 'audioId';
   static const regularPeriods = 'regular';
+  static const playerId = 'playerId';
+  static const playerName = 'playerName';
   static const transcriptStatus = 'transcriptStatus';
 }
 
@@ -156,6 +158,9 @@ class MatchEvent {
   bool get isVoided => voidedAt != null;
 
   String? get text => metadata[MetaKeys.text] as String?;
+
+  /// Optional player added after the fact (snapshot of the label).
+  String? get playerName => metadata[MetaKeys.playerName] as String?;
 
   MatchEvent copyWith({
     String? subtype,

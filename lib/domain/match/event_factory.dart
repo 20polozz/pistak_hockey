@@ -124,7 +124,7 @@ class EventFactory {
     if (s.isInPlay) {
       return [
         a.eventAt(s, EventTypes.periodEnd,
-        metadata: {MetaKeys.regularPeriods: s.format.periods}),
+            metadata: {MetaKeys.regularPeriods: s.format.periods}),
         a.eventAt(s, EventTypes.matchEnd, metadata: {MetaKeys.forced: true}),
       ];
     }
@@ -169,8 +169,8 @@ class EventFactory {
     final a = _Action(this, clock.now());
     final events = [a.eventAt(s, EventTypes.timeout, team: team)];
     if (s.phase == MatchPhase.running && s.format.stopClockOnTimeout) {
-      events.add(a.eventAt(s, EventTypes.clockPause,
-          subtype: PauseReasons.timeout));
+      events.add(
+          a.eventAt(s, EventTypes.clockPause, subtype: PauseReasons.timeout));
     }
     return events;
   }

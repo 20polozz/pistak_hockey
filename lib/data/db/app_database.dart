@@ -8,12 +8,19 @@ part 'app_database.g.dart';
 ///
 /// Schema changes MUST bump [schemaVersion] and add a migration step:
 /// user data on devices is never thrown away.
-@DriftDatabase(tables: [Matches, MatchEvents, AppSettings, AudioRecordings])
+@DriftDatabase(tables: [
+  Matches,
+  MatchEvents,
+  AppSettings,
+  AudioRecordings,
+  Teams,
+  TeamMembers,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -21,6 +28,12 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           // Never drop user data: only additive steps.
           if (from < 2) await m.createTable(audioRecordings);
+          if (from < 3) {
+            await m.createTable(teams);
+            await m.createTable(teamMembers);
+            await m.addColumn(matches, matches.homeTeamId);
+            await m.addColumn(matches, matches.awayTeamId);
+          }
         },
         beforeOpen: (details) async {
           // Durability first: every committed transaction is on disk.

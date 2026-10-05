@@ -122,7 +122,8 @@ class _VoiceRecorderDialogState extends State<VoiceRecorderDialog> {
         ],
       ),
       actions: [
-        TextButton(onPressed: _stopping ? null : _cancel, child: Text(l.cancel)),
+        TextButton(
+            onPressed: _stopping ? null : _cancel, child: Text(l.cancel)),
       ],
     );
   }

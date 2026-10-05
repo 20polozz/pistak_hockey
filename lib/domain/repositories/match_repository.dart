@@ -13,6 +13,8 @@ abstract class MatchRepository {
     required MatchFormat format,
     String? homeName,
     String? awayName,
+    String? homeTeamId,
+    String? awayTeamId,
     String? category,
     String? competition,
     String? venue,

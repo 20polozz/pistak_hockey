@@ -36,5 +36,6 @@ Uint8List pcm16ToWav(Uint8List pcm,
 }
 
 /// Duration of PCM 16-bit audio.
-Duration pcm16Duration(int bytes, {required int sampleRate, required int channels}) =>
+Duration pcm16Duration(int bytes,
+        {required int sampleRate, required int channels}) =>
     Duration(microseconds: bytes * 1000000 ~/ (sampleRate * channels * 2));

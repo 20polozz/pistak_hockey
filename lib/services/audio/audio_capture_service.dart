@@ -71,8 +71,8 @@ class AudioCaptureService {
     if (rec == null) throw const MicrophoneUnavailable('not recording');
     await rec.stop();
     // The stream close event delivers the last chunk.
-    await _streamDone?.future.timeout(const Duration(seconds: 2),
-        onTimeout: () {});
+    await _streamDone?.future
+        .timeout(const Duration(seconds: 2), onTimeout: () {});
     await _sub?.cancel();
     await rec.dispose();
     _recorder = null;
