@@ -50,6 +50,11 @@ class SyncBadge extends ConsumerWidget {
               Icons.cloud_off_outlined,
               l.syncOffline
             ),
+          SyncState.needsLogin => (
+              PistakColors.warning,
+              Icons.lock_outline,
+              l.syncNeedsLogin
+            ),
         };
         return Tooltip(
           message: text,

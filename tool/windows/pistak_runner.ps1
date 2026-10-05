@@ -38,6 +38,11 @@ $actions = @{
   'tap'       = 'adb -s'
   'launchapp' = 'adb -s'
   'killemu'   = 'taskkill /F /IM qemu-system-x86_64.exe /T'
+  'backendget'  = 'cd backend && dart pub get'
+  'backendtest' = 'cd backend && dart test'
+  'backendanalyze' = 'cd backend && dart analyze'
+  # Stops stray local API servers started by tests (only bin/server.dart).
+  'killserver' = 'powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like ''*bin/server.dart*'' } | Invoke-CimMethod -MethodName Terminate"'
 }
 $adb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
 

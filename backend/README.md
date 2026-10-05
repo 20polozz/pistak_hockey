@@ -1,24 +1,57 @@
-# PISTAK backend (Fase 2)
+# PISTAK API (backend)
 
-No implementat a la Fase 1 (l'app no el necessita). Contracte ja definit al client:
-`lib/sync/remote_sync_api.dart`.
-
-## Proposta
-
-- **PostgreSQL** (decidit): esquema a `docs/DATABASE.md`, RLS per usuari.
-- **Capa d'API** (a confirmar a l'inici de la Fase 2): Supabase (Auth + Storage + funcions SQL)
-  o API pròpia (Dart Frog / Node) + Postgres + S3.
+Small Dart server (shelf) with **accounts** and **offline-first sync**. No vendor lock-in:
+storage is behind the `Store` interface (SQLite today; a PostgreSQL implementation can be
+added without touching the routes or the app).
 
 ## Endpoints
 
-| Mètode | Ruta | Descripció |
-|--------|------|------------|
-| POST | `/auth/*` | registre, login, refresc de token |
-| POST | `/sync/push` | `{matches:[…], events:[…]}` → `{accepted:{id: revision}}` (idempotent) |
-| GET | `/sync/pull?since=<cursor>` | canvis d'altres dispositius |
-| CRUD | `/teams`, `/teams/{id}/players`… | equips (opcional) |
-| POST | `/audio` | pujada d'àudio (Fase 4) → transcripció asíncrona |
-| GET | `/matches/{id}/report.pdf` | (opcional; el PDF també es pot generar al client) |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/health` | – | liveness |
+| POST | `/auth/register` | – | `{email, password}` → `{token, userId, email}` (201) |
+| POST | `/auth/login` | – | `{email, password}` → `{token, userId, email}`; 10 failures/15 min → 429 |
+| POST | `/sync/push` | Bearer | `{matches:[…], events:[…]}` → `{accepted:{matches:{id:rev}, events:{id:rev}}, rejected:{id:reason}}` |
+| GET | `/sync/pull?since=N` | Bearer | changes of *this user* after server cursor N → `{matches, events, cursor}` |
 
-Seguretat: HTTPS, contrasenyes amb hash (bcrypt/argon2 o proveïdor d'auth), tokens d'accés curts +
-refresc, validació de tots els camps, `owner_user_id` sempre del token (mai del cos de la petició).
+## Guarantees
+
+- **Idempotent**: upsert by id; a document is only replaced by a **higher revision**. Re-sending
+  after a lost acknowledgement never duplicates anything.
+- **Isolation**: every document belongs to the user that first pushed it; other users get
+  `forbidden` and never see it in `/sync/pull`.
+- **Passwords**: PBKDF2-HMAC-SHA256 (120 000 iterations, random salt), never stored in clear.
+- **Tokens**: HS256 JWT, 30-day expiry, secret from the environment only.
+- **Durability**: SQLite WAL + `synchronous=FULL`.
+
+## Run locally
+
+```bash
+cd backend
+dart pub get
+dart test                       # 9 API tests
+PISTAK_JWT_SECRET=$(openssl rand -hex 32) dart run bin/server.dart
+```
+
+Then build the app against it:
+
+```bash
+flutter run -d chrome --dart-define=PISTAK_API_URL=http://localhost:8080
+```
+
+Without `PISTAK_API_URL` the app hides accounts and works 100 % locally.
+
+## Environment
+
+| Variable | Required | Default |
+|---|---|---|
+| `PISTAK_JWT_SECRET` | yes (≥ 32 chars) | – |
+| `PISTAK_DB` | no | `pistak.sqlite` |
+| `PORT` | no | `8080` |
+| `PISTAK_ORIGINS` | no | `*` (set your web domain in production) |
+
+## Deploy
+
+`Dockerfile` builds an AOT binary running as a non-root user with the database on the `/data`
+volume. Put it behind HTTPS (any reverse proxy / PaaS: Fly.io, Railway, Render, a VPS with
+Caddy…). Back up `/data/pistak.sqlite` (e.g. Litestream) or switch to PostgreSQL when needed.

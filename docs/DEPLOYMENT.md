@@ -60,7 +60,10 @@ location = /pistak_sw.js { add_header Cache-Control "no-cache"; }
 
 ## Backend (Fase 2)
 
-Vegeu `backend/README.md`. HTTPS obligatori, secrets fora del repositori, RLS a PostgreSQL.
+Vegeu `backend/README.md`: `Dockerfile` llest (binari AOT, usuari no-root, volum `/data`).
+1. Desplegar el contenidor amb HTTPS (Fly.io, Railway, Render, VPS + Caddy…).
+2. Variables: `PISTAK_JWT_SECRET` (≥32 caràcters, secret del proveïdor), `PISTAK_ORIGINS` (domini web).
+3. Compilar l'app amb `--dart-define=PISTAK_API_URL=https://…`.
 
 ## Checklist de release
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers.dart';
+import 'account_screen.dart';
 import 'home_screen.dart';
 
 /// PISTAK → COMENÇAR → "Vols iniciar sessió?" → continue without account.
@@ -67,9 +68,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 16),
                     OutlinedButton(
-                      onPressed: () => ScaffoldMessenger.of(context)
-                          .showSnackBar(
-                              SnackBar(content: Text(l.accountsComingSoon))),
+                      onPressed: () async {
+                        if (!isBackendConfigured) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(l.accountsComingSoon)));
+                          return;
+                        }
+                        await Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                                builder: (_) => const AccountScreen()));
+                        if (ref.read(authServiceProvider).isSignedIn) {
+                          await _continue();
+                        }
+                      },
                       child: Text(l.signIn),
                     ),
                     const SizedBox(height: 12),

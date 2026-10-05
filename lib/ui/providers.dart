@@ -1,6 +1,8 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/auth_service.dart';
+import '../auth/remote_auth_service.dart';
 import '../core/clock.dart';
 import '../data/db/app_database.dart';
 import '../data/repositories/drift_audio_repository.dart';
@@ -22,6 +24,7 @@ import '../services/audio/audio_playback_service.dart';
 import '../services/transcription/transcription_queue.dart';
 import '../services/transcription/transcription_service.dart';
 import '../services/match_session_service.dart';
+import '../sync/http_sync_api.dart';
 import '../sync/remote_sync_api.dart';
 import '../sync/sync_engine.dart';
 import 'match_controller.dart';
@@ -86,18 +89,49 @@ final teamMembersProvider = StreamProvider.family<List<TeamMember>, String>(
 final matchFilterProvider =
     StateProvider<MatchFilter>((ref) => const MatchFilter());
 
-final authServiceProvider =
-    Provider<AuthService>((ref) => const GuestAuthService());
+/// API base URL, set at build time:
+///   flutter build web --dart-define=PISTAK_API_URL=https://api.example.com
+/// Empty = no backend: the app works 100% locally (accounts hidden).
+const apiBaseUrl = String.fromEnvironment('PISTAK_API_URL');
+bool get isBackendConfigured => apiBaseUrl.isNotEmpty;
+
+/// The account service when a backend is configured (overridden in main
+/// after restoring the saved session), otherwise null.
+final accountProvider =
+    ChangeNotifierProvider<RemoteAuthService?>((ref) => null);
+
+final authServiceProvider = Provider<AuthService>(
+    (ref) => ref.watch(accountProvider) ?? const GuestAuthService());
+
+final syncApiProvider = Provider<RemoteSyncApi>((ref) {
+  final account = ref.watch(accountProvider);
+  if (account == null) return const OfflineOnlyApi();
+  return HttpSyncApi(baseUrl: apiBaseUrl, token: account.accessToken);
+});
 
 final syncEngineProvider = Provider<SyncEngine>((ref) {
+  final settings = ref.watch(settingsRepositoryProvider);
   final engine = SyncEngine(
     repository: ref.watch(matchRepositoryProvider),
-    api: const OfflineOnlyApi(), // Phase 2: HTTP implementation.
+    api: ref.watch(syncApiProvider),
     auth: ref.watch(authServiceProvider),
+    readCursor: (uid) async =>
+        int.tryParse(await settings.get('sync_cursor:$uid') ?? '') ?? 0,
+    writeCursor: (uid, c) => settings.set('sync_cursor:$uid', '$c'),
   );
   ref.onDispose(engine.dispose);
   return engine;
 });
+
+/// Keeps background sync running while signed in (watched by the app root).
+final syncAutoStartProvider = Provider<void>((ref) {
+  final engine = ref.watch(syncEngineProvider);
+  if (ref.watch(authServiceProvider).isSignedIn) engine.start();
+});
+
+/// Connectivity changes (wifi/mobile/none) → try to sync right away.
+final connectivityProvider = StreamProvider<List<ConnectivityResult>>(
+    (ref) => Connectivity().onConnectivityChanged);
 
 final sessionServiceProvider =
     Provider<MatchSessionService>((ref) => const MatchSessionService());

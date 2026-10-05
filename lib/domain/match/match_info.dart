@@ -143,6 +143,38 @@ class MatchInfo {
         deletedAt: deletedAt ?? this.deletedAt,
       );
 
+  factory MatchInfo.fromJson(Map<String, dynamic> j) {
+    DateTime? dt(String k) =>
+        j[k] == null ? null : DateTime.parse(j[k] as String).toUtc();
+    return MatchInfo(
+      id: j['id'] as String,
+      sport: j['sport'] as String? ?? 'roller_hockey',
+      format: MatchFormat.fromJson(
+          Map<String, dynamic>.from(j['format'] as Map? ?? const {})),
+      status: MatchStatus.fromCode(j['status'] as String? ?? ''),
+      homeName: j['homeName'] as String?,
+      awayName: j['awayName'] as String?,
+      homeTeamId: j['homeTeamId'] as String?,
+      awayTeamId: j['awayTeamId'] as String?,
+      category: j['category'] as String?,
+      competition: j['competition'] as String?,
+      venue: j['venue'] as String?,
+      season: j['season'] as String?,
+      notes: j['notes'] as String?,
+      scheduledAt: dt('scheduledAt'),
+      homeScore: (j['homeScore'] as num?)?.toInt() ?? 0,
+      awayScore: (j['awayScore'] as num?)?.toInt() ?? 0,
+      startedAt: dt('startedAt'),
+      endedAt: dt('endedAt'),
+      createdAt: dt('createdAt') ?? DateTime.now().toUtc(),
+      updatedAt: dt('updatedAt') ?? DateTime.now().toUtc(),
+      deviceId: j['deviceId'] as String? ?? 'remote',
+      revision: (j['revision'] as num?)?.toInt() ?? 1,
+      syncStatus: SyncStatus.synced,
+      deletedAt: dt('deletedAt'),
+    );
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'sport': sport,

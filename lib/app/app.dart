@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,6 +44,11 @@ class _PistakAppState extends ConsumerState<PistakApp> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(syncAutoStartProvider);
+    ref.listen(connectivityProvider, (_, next) {
+      final online = next.valueOrNull?.any((c) => c != ConnectivityResult.none);
+      if (online == true) ref.read(syncEngineProvider).poke();
+    });
     final code = ref.watch(localeCodeProvider);
     return MaterialApp(
       title: 'PISTAK',

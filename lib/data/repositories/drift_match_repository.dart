@@ -338,6 +338,79 @@ class DriftMatchRepository implements MatchRepository {
     return q.watchSingle().map((r) => r.read(count) ?? 0);
   }
 
+  @override
+  Future<int> applyRemote({
+    List<Map<String, dynamic>> matches = const [],
+    List<Map<String, dynamic>> events = const [],
+  }) =>
+      db.transaction(() async {
+        var changed = 0;
+        final touched = <String>{};
+        for (final j in matches) {
+          final m = MatchInfo.fromJson(j);
+          final cur = await (db.select(db.matches)
+                ..where((x) => x.id.equals(m.id)))
+              .getSingleOrNull();
+          if (cur != null &&
+              (cur.revision >= m.revision ||
+                  cur.syncStatus == SyncStatus.pending.code)) {
+            continue;
+          }
+          await db.into(db.matches).insertOnConflictUpdate(MatchesCompanion(
+                id: Value(m.id),
+                sport: Value(m.sport),
+                status: Value(m.status.code),
+                formatJson: Value(jsonEncode(m.format.toJson())),
+                homeName: Value(m.homeName),
+                awayName: Value(m.awayName),
+                homeTeamId: Value(m.homeTeamId),
+                awayTeamId: Value(m.awayTeamId),
+                category: Value(m.category),
+                competition: Value(m.competition),
+                venue: Value(m.venue),
+                season: Value(m.season),
+                notes: Value(m.notes),
+                scheduledAt: Value(m.scheduledAt?.millisecondsSinceEpoch),
+                createdAt: Value(m.createdAt.millisecondsSinceEpoch),
+                updatedAt: Value(m.updatedAt.millisecondsSinceEpoch),
+                deviceId: Value(m.deviceId),
+                revision: Value(m.revision),
+                syncStatus: Value(SyncStatus.synced.code),
+                deletedAt: Value(m.deletedAt?.millisecondsSinceEpoch),
+              ));
+          touched.add(m.id);
+          changed++;
+        }
+        for (final j in events) {
+          final e = MatchEvent.fromJson(j);
+          final cur = await (db.select(db.matchEvents)
+                ..where((x) => x.id.equals(e.id)))
+              .getSingleOrNull();
+          if (cur != null &&
+              (cur.revision >= e.revision ||
+                  cur.syncStatus == SyncStatus.pending.code)) {
+            continue;
+          }
+          var seq = cur?.seq;
+          if (seq == null) {
+            final maxSeq = db.matchEvents.seq.max();
+            final q = db.selectOnly(db.matchEvents)
+              ..addColumns([maxSeq])
+              ..where(db.matchEvents.matchId.equals(e.matchId));
+            seq = (await q.map((r) => r.read(maxSeq)).getSingle() ?? 0) + 1;
+          }
+          await db.into(db.matchEvents).insertOnConflictUpdate(
+              _eventToCompanion(
+                  e.copyWith(seq: seq, syncStatus: SyncStatus.synced)));
+          touched.add(e.matchId);
+          changed++;
+        }
+        for (final id in touched) {
+          await _refreshCache(id);
+        }
+        return changed;
+      });
+
   // ================================================================ mapping
 
   static String? _clean(String? v) {

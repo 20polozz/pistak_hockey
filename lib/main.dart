@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
+import 'auth/remote_auth_service.dart';
+import 'auth/token_store.dart';
 import 'data/db/app_database.dart';
 import 'data/db/connection.dart';
 import 'data/repositories/settings_repository.dart';
@@ -18,11 +20,24 @@ Future<void> main() async {
     final onboarded = await settings.isOnboardingDone();
     final locale = await settings.localeCode();
 
+    // Optional cloud account (only when the build has a backend URL).
+    RemoteAuthService? account;
+    if (isBackendConfigured) {
+      account = RemoteAuthService(
+          baseUrl: apiBaseUrl, store: const SecureTokenStore());
+      try {
+        await account.load();
+      } catch (_) {
+        // A broken keystore must never block recording matches.
+      }
+    }
+
     runApp(ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(db),
         deviceIdProvider.overrideWithValue(deviceId),
         localeCodeProvider.overrideWith((ref) => locale),
+        if (account != null) accountProvider.overrideWith((ref) => account),
       ],
       child: PistakApp(onboardingDone: onboarded),
     ));

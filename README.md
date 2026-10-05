@@ -14,11 +14,11 @@ Arquitectura preparada per a altres esports de pista.
 | Fase | Contingut | Estat |
 |------|-----------|-------|
 | 1 — Core | Offline-first, partit sense títol, cronòmetre, esdeveniments, temps morts (inici/fi), incidències escrites i **de veu**, cronologia editable, desfer, autosave, recuperació, categories configurables, export CSV/JSON | ✅ Android + Web verificats (emulador i navegador), 44 tests en verd |
-| 2 — Comptes i núvol | Registre, login, equips, partits programats, backend, sincronització | Preparada (contractes `RemoteSyncApi`, `AuthService`, outbox) |
-| 3 — Informes | PDF, estadístiques avançades | Resum + export CSV/JSON fets; falta PDF |
+| 2 — Comptes i núvol | Registre/login, equips i plantilles, partits programats, backend propi (Dart), sincronització push/pull multi-dispositiu, detecció de connexió | ✅ Fet i provat E2E amb servidor real (falta desplegar-lo a internet) |
+| 3 — Informes | PDF, CSV, JSON, compartir/descarregar | ✅ Fet |
 | 4 — Àudio | Speech-to-Text real (backend) | Gravació local + cua de transcripció ja fetes; falta el servei |
 | 5 — Wear OS | App Kotlin al rellotge | Dissenyada |
-| 6 — Polish | Animacions, icona, splash… | — |
+| 6 — Polish | Icona, splash, branding | ✅ Icona/splash fets; resta d'animacions/accessibilitat en curs |
 
 ## Plataformes
 
@@ -51,3 +51,15 @@ Detalls (incloent els fitxers WASM de la base de dades web): **[docs/SETUP.md](d
 ## Llicència
 
 Propietari. Tots els drets reservats.
+
+## Backend i comptes
+
+El servidor és a [`backend/`](backend/README.md) (Dart + shelf, SQLite, Docker). L'app només mostra
+els comptes si es compila amb l'URL del servidor:
+
+```bash
+flutter build apk --dart-define=PISTAK_API_URL=https://api.el-teu-domini.cat
+flutter build web --dart-define=PISTAK_API_URL=https://api.el-teu-domini.cat
+```
+
+Sense aquesta variable PISTAK funciona 100% local, com sempre.

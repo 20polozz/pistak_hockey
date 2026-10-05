@@ -51,7 +51,7 @@ tempsPartit(now) = duradaPart × (part − 1) + tempsPart(now)
 
 La UI només repinta cada 250 ms. El valor sempre surt dels timestamps guardats.
 
-## Sincronització (Fase 2 — motor ja implementat i testat)
+## Sincronització (implementada: backend/ + HttpSyncApi)
 
 ```
 Dispositiu → SQLite (outbox: sync_status = pending) → SyncEngine → API HTTPS → PostgreSQL
@@ -90,3 +90,17 @@ INCIDÈNCIA → veu → gravar (record) → BD local → MatchEvent(INCIDENT/voi
 → feina al servidor → Speech-to-Text → transcripció (pending/processing/done/failed)
 ```
 Si la transcripció falla, l'àudio continua existint. L'usuari pot esborrar àudios (GDPR/LOPDGDD).
+
+
+## Estat actual de la sincronització (Fase 2)
+
+- **Client**: `HttpSyncApi` (HTTPS), `RemoteAuthService` (token a `flutter_secure_storage`),
+  `SyncEngine` push → pull amb cursor per usuari, reintents amb *backoff*, i `connectivity_plus`
+  per sincronitzar en el moment que torna la connexió.
+- **Servidor**: `backend/` — upsert idempotent per id+revisió, aïllament per usuari, pull incremental.
+- **Regla de conflicte**: guanya la revisió més alta; una còpia local amb canvis pendents no es
+  sobreescriu mai amb dades del servidor fins que s'ha enviat.
+- **Prova E2E** (`test/data/backend_e2e_test.dart`): servidor real, mòbil sense cobertura
+  (17 esdeveniments), torna la cobertura → s'envien una sola vegada, una tauleta amb el mateix
+  compte rep el partit sencer, una edició a la tauleta arriba al mòbil, un altre usuari no veu res.
+- Pendent: sincronitzar també equips/plantilles i els àudios (mateix protocol, nous `kind`).

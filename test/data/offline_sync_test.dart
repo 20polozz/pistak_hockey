@@ -52,6 +52,9 @@ class FakeServer implements RemoteSyncApi {
   }
 
   @override
+  Future<PullResult> pull(int cursor) async => PullResult(cursor: cursor);
+
+  @override
   Future<PushResult> pushMatches(List<MatchInfo> batch) async {
     if (!online) throw const SyncUnavailable('offline');
     final accepted = <String, int>{};

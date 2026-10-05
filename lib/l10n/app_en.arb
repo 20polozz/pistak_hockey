@@ -392,5 +392,49 @@
   },
   "statusScheduled": "Scheduled",
   "copyCsv": "Copy CSV to clipboard",
+  "syncNeedsLogin": "Sign in again",
+  "account": "Account",
+  "email": "Email",
+  "password": "Password",
+  "createAccount": "CREATE ACCOUNT",
+  "haveAccount": "I already have an account",
+  "noAccountYet": "I don't have an account",
+  "signOut": "Sign out",
+  "signedInAs": "Signed in as {email}",
+  "@signedInAs": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "syncNow": "Sync now",
+  "lastSync": "Last sync: {time}",
+  "@lastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "syncDone": "Synced: {sent} sent, {received} received",
+  "@syncDone": {
+    "placeholders": {
+      "sent": {
+        "type": "int"
+      },
+      "received": {
+        "type": "int"
+      }
+    }
+  },
+  "backendNotConfigured": "Cloud sync is not configured in this build. Everything is saved on this device.",
+  "accountBenefits": "With an account your matches are backed up and available on your other devices. Recording never needs internet.",
+  "errInvalidCredentials": "Wrong email or password.",
+  "errEmailTaken": "This email already has an account.",
+  "errWeakPassword": "Password must have at least 8 characters.",
+  "errInvalidEmail": "Invalid email.",
+  "errTooManyAttempts": "Too many attempts. Try again in 15 minutes.",
+  "errNetwork": "No connection to the server. You can keep using PISTAK offline.",
   "savedLocally": "Saved on this device"
 }

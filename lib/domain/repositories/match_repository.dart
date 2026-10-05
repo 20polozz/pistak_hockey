@@ -67,4 +67,12 @@ abstract class MatchRepository {
   Future<void> markMatchesSynced(Map<String, int> revisionsById);
 
   Stream<int> watchPendingCount();
+
+  /// Applies documents pulled from the server (other devices). A remote
+  /// copy only replaces a local one with a LOWER revision that has no
+  /// unsent local changes. Returns how many rows changed.
+  Future<int> applyRemote({
+    List<Map<String, dynamic>> matches = const [],
+    List<Map<String, dynamic>> events = const [],
+  });
 }

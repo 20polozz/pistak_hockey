@@ -15,6 +15,19 @@ class PushResult {
 abstract class RemoteSyncApi {
   Future<PushResult> pushMatches(List<MatchInfo> matches);
   Future<PushResult> pushEvents(List<MatchEvent> events);
+
+  /// Changes made on other devices since [cursor] (server sequence).
+  Future<PullResult> pull(int cursor);
+}
+
+/// Raw documents from the server (same JSON as MatchInfo/MatchEvent.toJson).
+class PullResult {
+  const PullResult(
+      {this.matches = const [], this.events = const [], required this.cursor});
+  final List<Map<String, dynamic>> matches;
+  final List<Map<String, dynamic>> events;
+  final int cursor;
+  bool get isEmpty => matches.isEmpty && events.isEmpty;
 }
 
 /// Phase 1: no backend. Nothing leaves the device.
@@ -28,6 +41,15 @@ class OfflineOnlyApi implements RemoteSyncApi {
   @override
   Future<PushResult> pushMatches(List<MatchInfo> matches) =>
       throw const SyncUnavailable('no backend configured');
+
+  @override
+  Future<PullResult> pull(int cursor) =>
+      throw const SyncUnavailable('no backend configured');
+}
+
+/// Thrown when the server rejects the token (user must sign in again).
+class SyncUnauthorized implements Exception {
+  const SyncUnauthorized();
 }
 
 class SyncUnavailable implements Exception {

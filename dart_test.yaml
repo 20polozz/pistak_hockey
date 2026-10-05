@@ -1,0 +1,3 @@
+# The backend E2E test starts a real server process; running suites one
+# at a time keeps it deterministic on every machine.
+concurrency: 1

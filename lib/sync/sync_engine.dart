@@ -5,12 +5,17 @@ import '../auth/auth_service.dart';
 import '../domain/repositories/match_repository.dart';
 import 'remote_sync_api.dart';
 
-enum SyncState { localOnly, idle, syncing, offline }
+/// localOnly: no account. needsLogin: the server rejected the session.
+enum SyncState { localOnly, idle, syncing, offline, needsLogin }
 
 class SyncReport {
-  const SyncReport({this.matches = 0, this.events = 0, this.error});
+  const SyncReport(
+      {this.matches = 0, this.events = 0, this.pulled = 0, this.error});
   final int matches;
   final int events;
+
+  /// Rows received from other devices.
+  final int pulled;
   final Object? error;
   bool get ok => error == null;
 }
@@ -29,7 +34,14 @@ class SyncEngine {
     this.batchSize = 200,
     this.baseRetry = const Duration(seconds: 5),
     this.maxRetry = const Duration(minutes: 5),
+    this.readCursor,
+    this.writeCursor,
   });
+
+  /// Persisted pull cursor per user (null = pull disabled).
+  final Future<int> Function(String userId)? readCursor;
+  final Future<void> Function(String userId, int cursor)? writeCursor;
+  DateTime? lastSuccess;
 
   final MatchRepository repository;
   final RemoteSyncApi api;
@@ -107,12 +119,38 @@ class SyncEngine {
         events += res.accepted.length;
         if (batch.length < batchSize || res.accepted.isEmpty) break;
       }
+      var pulled = 0;
+      final uid = auth.currentUserId;
+      final read = readCursor;
+      final write = writeCursor;
+      if (uid != null && read != null && write != null) {
+        var cursor = await read(uid);
+        while (true) {
+          final p = await api.pull(cursor);
+          if (!p.isEmpty) {
+            pulled += await repository.applyRemote(
+                matches: p.matches, events: p.events);
+          }
+          if (p.cursor == cursor) break;
+          cursor = p.cursor;
+          await write(uid, cursor);
+          if (p.matches.length + p.events.length < 500) break;
+        }
+      }
+      lastSuccess = DateTime.now();
       _set(SyncState.idle);
-      return SyncReport(matches: matches, events: events);
+      return SyncReport(matches: matches, events: events, pulled: pulled);
     } catch (e) {
-      _set(SyncState.offline);
+      _set(e is SyncUnauthorized ? SyncState.needsLogin : SyncState.offline);
       return SyncReport(matches: matches, events: events, error: e);
     }
+  }
+
+  /// Stops periodic sync (e.g. after signing out).
+  void stop() {
+    _timer?.cancel();
+    _timer = null;
+    _set(SyncState.localOnly);
   }
 
   void dispose() {

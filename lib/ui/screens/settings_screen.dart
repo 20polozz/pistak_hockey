@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers.dart';
+import 'account_screen.dart';
 import 'categories_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -50,6 +51,15 @@ class SettingsScreen extends ConsumerWidget {
               option(null, l.languageSystem),
               for (final (code, name) in _languages) option(code, name),
               const Divider(),
+              ListTile(
+                leading: const Icon(Icons.account_circle_outlined),
+                title: Text(l.account),
+                subtitle: Text(ref.watch(accountProvider)?.email ??
+                    (isBackendConfigured ? l.syncLocalOnly : l.savedLocally)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => const AccountScreen())),
+              ),
               ListTile(
                 leading: const Icon(Icons.timer_outlined),
                 title: Text(l.categories),
