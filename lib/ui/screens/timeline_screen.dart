@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../core/time_format.dart';
+import '../../domain/audio/audio_recording.dart';
 import '../../domain/match/match_event.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers.dart';
@@ -27,8 +28,12 @@ List<Widget> buildTimelineTiles(
       if (e.team == TeamSide.away) away++;
       score = l.scoreAfter(home, away);
     }
+    final pendingTranscript = e.subtype == IncidentKinds.voice &&
+        e.text == null &&
+        e.metadata[MetaKeys.transcriptStatus] != 'done';
     tiles.add(_TimelineTile(
       event: e,
+      note: pendingTranscript ? l.transcriptPending : null,
       title: eventLabel(l, e),
       team: e.team == null ? null : teamName(l, v.info, e.team!),
       score: score,
@@ -106,6 +111,7 @@ class _TimelineTile extends StatelessWidget {
     this.team,
     this.score,
     this.voidedLabel,
+    this.note,
     this.onTap,
   });
 
@@ -114,6 +120,7 @@ class _TimelineTile extends StatelessWidget {
   final String? team;
   final String? score;
   final String? voidedLabel;
+  final String? note;
   final VoidCallback? onTap;
 
   @override
@@ -163,6 +170,12 @@ class _TimelineTile extends StatelessWidget {
                         style: TextStyle(
                             fontWeight: FontWeight.w700, decoration: deco),
                       ),
+                      if (note != null)
+                        Text(note!,
+                            style: const TextStyle(
+                                fontStyle: FontStyle.italic,
+                                color: PistakColors.warning,
+                                fontSize: 12)),
                       if (text != null)
                         Text(text,
                             style: TextStyle(
@@ -271,6 +284,10 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
             ),
             const SizedBox(height: 16),
           ],
+          if (e.metadata[MetaKeys.audioId] is String) ...[
+            _AudioControls(audioId: e.metadata[MetaKeys.audioId] as String),
+            const SizedBox(height: 12),
+          ],
           if (e.type == EventTypes.incident) ...[
             TextField(
               controller: _text,
@@ -338,5 +355,88 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
     );
     await ref.read(matchControllerProvider(e.matchId)).updateEvent(updated);
     if (mounted) Navigator.pop(context);
+  }
+}
+
+/// Play / delete the audio of a voice incident.
+class _AudioControls extends ConsumerStatefulWidget {
+  const _AudioControls({required this.audioId});
+  final String audioId;
+
+  @override
+  ConsumerState<_AudioControls> createState() => _AudioControlsState();
+}
+
+class _AudioControlsState extends ConsumerState<_AudioControls> {
+  AudioRecording? _rec;
+  bool _loaded = false;
+  bool _playing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final r = await ref.read(audioRepositoryProvider).get(widget.audioId);
+    if (!mounted) return;
+    setState(() {
+      _rec = r;
+      _loaded = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final rec = _rec;
+    if (!_loaded) return const LinearProgressIndicator();
+    if (rec == null || !rec.hasAudio) {
+      return Text(l.audioDeleted,
+          style: const TextStyle(color: PistakColors.textMuted));
+    }
+    final status = switch (rec.transcriptStatus) {
+      TranscriptStatus.pending => l.transcriptPending,
+      TranscriptStatus.failed => l.transcriptFailed,
+      TranscriptStatus.done => null,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          FilledButton.tonalIcon(
+            onPressed: () async {
+              final player = ref.read(playbackServiceProvider);
+              if (_playing) {
+                await player.stop();
+              } else {
+                await player.play(rec.bytes!, mimeType: rec.mimeType);
+              }
+              if (mounted) setState(() => _playing = !_playing);
+            },
+            icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
+            label: Text(_playing ? l.stopAudio : l.playAudio),
+          ),
+          const SizedBox(width: 8),
+          Text(formatMatchTime(rec.duration),
+              style: const TextStyle(fontFeatures: tabularFigures)),
+          const Spacer(),
+          IconButton(
+            tooltip: l.deleteAudio,
+            icon: const Icon(Icons.delete_outline, color: PistakColors.danger),
+            onPressed: () async {
+              await ref.read(playbackServiceProvider).stop();
+              await ref.read(audioRepositoryProvider).deleteAudio(rec.id);
+              await _load();
+            },
+          ),
+        ]),
+        if (status != null)
+          Text(status,
+              style: const TextStyle(
+                  fontSize: 12, color: PistakColors.textMuted)),
+      ],
+    );
   }
 }

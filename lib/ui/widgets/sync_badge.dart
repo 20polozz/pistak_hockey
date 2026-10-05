@@ -8,7 +8,10 @@ import '../providers.dart';
 
 /// Discreet sync status. Informative only — it never blocks the user.
 class SyncBadge extends ConsumerWidget {
-  const SyncBadge({super.key});
+  const SyncBadge({super.key, this.compact = false});
+
+  /// Icon only (tooltip keeps the text) — for crowded app bars.
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,8 +47,10 @@ class SyncBadge extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, size: 18, color: color),
-                const SizedBox(width: 4),
-                Text(text, style: TextStyle(fontSize: 12, color: color)),
+                if (!compact) ...[
+                  const SizedBox(width: 4),
+                  Text(text, style: TextStyle(fontSize: 12, color: color)),
+                ],
               ],
             ),
           ),

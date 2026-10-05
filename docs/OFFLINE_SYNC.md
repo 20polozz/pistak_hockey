@@ -71,10 +71,20 @@ Dispositiu → SQLite (outbox: sync_status = pending) → SyncEngine → API HTT
 Test que ho demostra: `test/data/offline_sync_test.dart` (51 esdeveniments offline → tancar →
 reobrir → tall de connexió abans de l'ACK → resincronitzar → 0 duplicats, 0 pèrdues).
 
-## Àudio i transcripció (Fase 4)
+## Àudio i transcripció (implementat a la Fase 1, excepte el servei STT)
+
+Implementació actual:
+- `AudioCaptureService` (paquet `record`): PCM 16 bits, 16 kHz, mono → WAV. Igual a Android i Web.
+- Els bytes es guarden a la taula `audio_recordings` de la mateixa BD local (esquema v2), abans de
+  crear l'esdeveniment `INCIDENT/voice` (amb `metadata.audioId`). El moment és el del toc a INCIDÈNCIA.
+- Sense micròfon o sense permís → es registra igualment una incidència (sense àudio).
+- `TranscriptionQueue` processa els pendents cada 2 min i després de cada gravació; amb
+  `NoTranscriptionService` (Fase 1) tot queda `pending`. La transcripció s'escriu com a text editable
+  de l'esdeveniment, **sense sobreescriure mai** un text escrit a mà. 5 errors → `failed` (l'àudio es manté).
+- Reproduir (`audioplayers`) i eliminar l'àudio des de la cronologia.
 
 ```
-INCIDÈNCIA → veu → gravar (record) → fitxer local → MatchEvent(INCIDENT/voice, audioId)
+INCIDÈNCIA → veu → gravar (record) → BD local → MatchEvent(INCIDENT/voice, audioId)
 → el partit continua
 → cua de pujada pròpia (no bloqueja la d'esdeveniments) → Storage privat
 → feina al servidor → Speech-to-Text → transcripció (pending/processing/done/failed)

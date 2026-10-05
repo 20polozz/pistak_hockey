@@ -83,3 +83,31 @@ class AppSettings extends Table {
   @override
   Set<Column<Object>> get primaryKey => {settingKey};
 }
+
+/// Voice-incident audio. Bytes live in the database on every platform
+/// (Android SQLite file / Web OPFS), so one code path handles both.
+@DataClassName('AudioRow')
+@TableIndex(name: 'idx_audio_match', columns: {#matchId})
+@TableIndex(name: 'idx_audio_transcript', columns: {#transcriptStatus})
+class AudioRecordings extends Table {
+  TextColumn get id => text()();
+  TextColumn get matchId => text()();
+  TextColumn get eventId => text()();
+  TextColumn get mimeType => text()();
+  IntColumn get durationMs => integer()();
+  IntColumn get sizeBytes => integer()();
+  BlobColumn get bytes => blob().nullable()();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
+  TextColumn get transcriptStatus =>
+      text().withDefault(const Constant('pending'))();
+  IntColumn get attempts => integer().withDefault(const Constant(0))();
+  TextColumn get lastError => text().nullable()();
+  IntColumn get revision => integer().withDefault(const Constant(1))();
+  TextColumn get syncStatus =>
+      text().withDefault(const Constant('pending'))();
+  IntColumn get deletedAt => integer().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}

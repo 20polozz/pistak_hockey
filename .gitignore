@@ -34,3 +34,4 @@ secrets/
 
 # Local build runner
 .runner/
+.e2e_profile/

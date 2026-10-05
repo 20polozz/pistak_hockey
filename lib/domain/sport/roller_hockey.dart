@@ -22,6 +22,7 @@ const rollerHockey = SportDefinition(
     EventTypes.foul,
     EventTypes.card,
     EventTypes.timeout,
+    EventTypes.timeoutEnd,
     EventTypes.incident,
   },
   cardColors: [CardColors.yellow, CardColors.blue, CardColors.red],

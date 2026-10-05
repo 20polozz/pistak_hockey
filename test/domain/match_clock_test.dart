@@ -149,6 +149,31 @@ void main() {
       expect(sim.shown, '16:00');
     });
 
+    test('3 periods × 10 min with two breaks', () {
+      final sim = Sim(
+          format: const MatchFormat(
+              id: 'c3',
+              name: '3 × 10',
+              periods: 3,
+              periodDuration: Duration(minutes: 10),
+              breakDuration: Duration(minutes: 2)));
+      sim.run((f, s) => f.startMatch(s));
+      for (var p = 1; p <= 2; p++) {
+        sim.waitMs(10);
+        final end = sim.run((f, s) => f.endPeriod(s));
+        expect(end.last.type, EventTypes.breakStart);
+        sim.waitMs(2);
+        sim.run((f, s) => f.startNextPeriod(s));
+      }
+      expect(sim.state.period, 3);
+      sim.waitMs(4);
+      expect(sim.shown, '24:00');
+      sim.waitMs(6);
+      final end = sim.run((f, s) => f.endPeriod(s));
+      expect(end.last.type, EventTypes.matchEnd);
+      expect(formatMatchTime(end.last.matchTime), '30:00');
+    });
+
     test('overtime of a period is flagged, not cut', () {
       final sim = Sim();
       sim.run((f, s) => f.startMatch(s));
@@ -220,6 +245,51 @@ void main() {
       final ev = sim.run((f, s) => f.timeout(s, TeamSide.away));
       expect(ev.single.type, EventTypes.timeout);
       expect(sim.state.isClockRunning, isTrue);
+    });
+
+    test('end of timeout is recorded and restarts the clock', () {
+      final sim = Sim();
+      sim.run((f, s) => f.startMatch(s));
+      sim.waitMs(10);
+      sim.run((f, s) => f.timeout(s, TeamSide.away));
+      sim.waitMs(1);
+      expect(sim.shown, '10:00');
+      final end = sim.run((f, s) => f.endTimeout(s));
+      expect(end.map((e) => e.type),
+          [EventTypes.timeoutEnd, EventTypes.clockResume]);
+      expect(end.first.team, TeamSide.away);
+      expect(end.last.subtype, ResumeReasons.timeoutEnd);
+      final st = sim.state;
+      expect(st.activeTimeout, isNull);
+      expect(st.isClockRunning, isTrue);
+      expect(st.away.timeouts, 1);
+      sim.waitMs(2);
+      expect(sim.shown, '12:00');
+      // No active timeout → nothing to end.
+      expect(sim.run((f, s) => f.endTimeout(s)), isEmpty);
+    });
+
+    test('end of timeout without clock stop only closes the timeout', () {
+      final sim = Sim(
+          format: rollerHockey.defaultFormat.copyWith(stopClockOnTimeout: false));
+      sim.run((f, s) => f.startMatch(s));
+      sim.run((f, s) => f.timeout(s, TeamSide.home));
+      expect(sim.state.activeTimeout, isNotNull);
+      final end = sim.run((f, s) => f.endTimeout(s));
+      expect(end.single.type, EventTypes.timeoutEnd);
+      expect(sim.state.activeTimeout, isNull);
+      expect(sim.state.isClockRunning, isTrue);
+    });
+
+    test('custom timeout duration drives the countdown', () {
+      final sim = Sim(
+          format: rollerHockey.defaultFormat
+              .copyWith(timeoutDuration: const Duration(seconds: 30)));
+      sim.run((f, s) => f.startMatch(s));
+      sim.run((f, s) => f.timeout(s, TeamSide.home));
+      sim.wait(const Duration(seconds: 10));
+      expect(sim.state.timeoutRemainingAt(sim.clock.now()),
+          const Duration(seconds: 20));
     });
 
     test('undo of a timeout removes the timeout AND its pause', () {

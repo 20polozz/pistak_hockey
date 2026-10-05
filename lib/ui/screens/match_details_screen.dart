@@ -31,6 +31,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
   final _periods = TextEditingController();
   final _minutes = TextEditingController();
   final _breakMinutes = TextEditingController();
+  final _timeoutSeconds = TextEditingController();
+  final _timeoutsPerPeriod = TextEditingController();
   DateTime? _scheduledAt;
   late MatchFormat _format;
   bool _stopOnTimeout = true;
@@ -66,6 +68,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
     _periods.text = '${f.periods}';
     _minutes.text = '${f.periodDuration.inMinutes}';
     _breakMinutes.text = '${f.breakDuration.inMinutes}';
+    _timeoutSeconds.text = '${f.timeoutDuration.inSeconds}';
+    _timeoutsPerPeriod.text = '${f.timeoutsPerTeamPerPeriod}';
     _stopOnTimeout = f.stopClockOnTimeout;
   }
 
@@ -73,7 +77,7 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
   void dispose() {
     for (final c in [
       _home, _away, _category, _competition, _venue, _season, _notes,
-      _periods, _minutes, _breakMinutes,
+      _periods, _minutes, _breakMinutes, _timeoutSeconds, _timeoutsPerPeriod,
     ]) {
       c.dispose();
     }
@@ -166,7 +170,11 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
   Widget _formatSection(AppLocalizations l, MatchInfo info) {
     final sport = Sports.byId(info.sport);
     final locked = info.status != MatchStatus.notStarted;
-    final presetIds = sport.defaultFormats.map((f) => f.id).toSet();
+    final options = [
+      ...sport.defaultFormats,
+      ...?ref.watch(categoriesProvider).valueOrNull,
+    ];
+    final presetIds = options.map((f) => f.id).toSet();
     final selected = presetIds.contains(_format.id) ? _format.id : _customId;
     final isCustom = selected == _customId;
 
@@ -188,7 +196,7 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final f in sport.defaultFormats)
+                for (final f in options)
                   ChoiceChip(
                     label: Text(f.name),
                     selected: selected == f.id,
@@ -217,6 +225,16 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
                 Expanded(
                     child: _numField(
                         _breakMinutes, l.formatBreakMinutes, locked)),
+              ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                    child: _numField(
+                        _timeoutSeconds, l.formatTimeoutSeconds, locked)),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: _numField(_timeoutsPerPeriod,
+                        l.formatTimeoutsPerPeriod, locked)),
               ]),
             ],
             SwitchListTile(
@@ -252,12 +270,16 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
     final periods = read(_periods, _format.periods, 1);
     final minutes = read(_minutes, _format.periodDuration.inMinutes, 1);
     final breakMin = read(_breakMinutes, _format.breakDuration.inMinutes, 0);
+    final toSecs = read(_timeoutSeconds, _format.timeoutDuration.inSeconds, 1);
+    final toPer = read(_timeoutsPerPeriod, _format.timeoutsPerTeamPerPeriod, 0);
     return _format.copyWith(
       id: _customId,
       name: '$periods × $minutes min',
       periods: periods,
       periodDuration: Duration(minutes: minutes),
       breakDuration: Duration(minutes: breakMin),
+      timeoutDuration: Duration(seconds: toSecs),
+      timeoutsPerTeamPerPeriod: toPer,
       stopClockOnTimeout: _stopOnTimeout,
     );
   }

@@ -151,6 +151,13 @@ class MatchProjector {
           }
         }
 
+      case EventTypes.timeoutEnd:
+        if (s.activeTimeout != null) {
+          s.activeTimeout = null;
+        } else {
+          s.anomalies.add('TIMEOUT_END without active timeout ${e.id}');
+        }
+
       case EventTypes.incident:
         s.incidents++;
 

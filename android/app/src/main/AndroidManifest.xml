@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Voice incidents (asked only when the user starts recording). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
         android:label="PISTAK"
         android:name="${applicationName}"

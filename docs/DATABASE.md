@@ -1,6 +1,6 @@
 # Model de dades
 
-## Local (SQLite via Drift) — esquema v1
+## Local (SQLite via Drift) — esquema v2
 
 Tots els instants són `INTEGER` en mil·lisegons UTC (precisió completa a totes les plataformes).
 
@@ -29,7 +29,7 @@ Tots els instants són `INTEGER` en mil·lisegons UTC (precisió completa a tote
 |---------|-------|-------|
 | id | TEXT PK | UUID v7 — clau d'idempotència |
 | match_id | TEXT | |
-| type | TEXT | `MATCH_START`, `MATCH_END`, `PERIOD_START`, `PERIOD_END`, `BREAK_START`, `CLOCK_PAUSE`, `CLOCK_RESUME`, `CLOCK_ADJUST`, `GOAL`, `FOUL`, `CARD`, `TIMEOUT`, `INCIDENT` |
+| type | TEXT | `MATCH_START`, `MATCH_END`, `PERIOD_START`, `PERIOD_END`, `BREAK_START`, `CLOCK_PAUSE`, `CLOCK_RESUME`, `CLOCK_ADJUST`, `GOAL`, `FOUL`, `CARD`, `TIMEOUT`, `TIMEOUT_END`, `INCIDENT` |
 | subtype | TEXT? | `CARD`: yellow/blue/red · `INCIDENT`: text/voice/unjustified · `CLOCK_PAUSE`: timeout |
 | team | TEXT? | home/away |
 | period | INT | 0 = abans de començar |
@@ -47,8 +47,14 @@ Tots els instants són `INTEGER` en mil·lisegons UTC (precisió completa a tote
 
 Índexs: `(match_id, seq)`, `(sync_status)`, `(action_id)`.
 
+### `audio_recordings` (v2)
+`id`, `match_id`, `event_id`, `mime_type` (audio/wav), `duration_ms`, `size_bytes`, `bytes` (BLOB, nul si
+l'usuari l'elimina), `transcript_status` (pending/done/failed), `attempts`, `last_error`, `revision`,
+`sync_status`, `deleted_at`, `created_at`, `updated_at`.
+
 ### `app_settings`
-Clau/valor: `device_id`, `locale`, `onboarding_done`, `last_format`.
+Clau/valor: `device_id`, `locale`, `onboarding_done`, `last_format`, `categories` (llista JSON de
+`MatchFormat` definits per l'usuari).
 
 ### Migracions
 `schemaVersion` a `app_database.dart`. Cada canvi d'esquema = nova versió + pas a `onUpgrade`.

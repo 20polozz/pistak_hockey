@@ -21,7 +21,11 @@ String eventLabel(AppLocalizations l, MatchEvent e) {
     case EventTypes.clockPause:
       return e.subtype == PauseReasons.timeout ? l.evPauseTimeout : l.evPause;
     case EventTypes.clockResume:
-      return l.evResume;
+      return e.subtype == ResumeReasons.timeoutEnd
+          ? l.evResumeAfterTimeout
+          : l.evResume;
+    case EventTypes.timeoutEnd:
+      return l.evTimeoutEnd;
     case EventTypes.clockAdjust:
       return l.evClockAdjust;
     case EventTypes.goal:
@@ -83,7 +87,14 @@ Color cardColor(String? color) => switch (color) {
     case EventTypes.timeout:
       return (teamColor(e.team), Icons.timer_outlined);
     case EventTypes.incident:
-      return (PistakColors.incident, Icons.report_problem_outlined);
+      return (
+        PistakColors.incident,
+        e.subtype == IncidentKinds.voice
+            ? Icons.mic_none
+            : Icons.report_problem_outlined
+      );
+    case EventTypes.timeoutEnd:
+      return (teamColor(e.team), Icons.timer_off_outlined);
     case EventTypes.clockPause:
       return (PistakColors.textMuted, Icons.pause_circle_outline);
     case EventTypes.clockResume:

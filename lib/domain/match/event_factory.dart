@@ -138,8 +138,24 @@ class EventFactory {
     return events;
   }
 
+  /// Ends the active timeout. If the clock was stopped by it, the clock
+  /// resumes in the same action (one tap = play restarts).
+  List<MatchEvent> endTimeout(MatchState s) {
+    final t = s.activeTimeout;
+    if (t == null) return const [];
+    final a = _Action(this, clock.now());
+    final events = [a.eventAt(s, EventTypes.timeoutEnd, team: t.team)];
+    if (s.phase == MatchPhase.paused) {
+      events.add(a.eventAt(s, EventTypes.clockResume,
+          subtype: ResumeReasons.timeoutEnd));
+    }
+    return events;
+  }
+
   List<MatchEvent> incident(MatchState s,
-      {String kind = IncidentKinds.unjustified, String? text}) {
+      {String kind = IncidentKinds.unjustified,
+      String? text,
+      Map<String, dynamic> extra = const {}}) {
     final trimmed = text?.trim();
     return [
       _Action(this, clock.now()).eventAt(
@@ -148,6 +164,7 @@ class EventFactory {
         subtype: kind,
         metadata: {
           if (trimmed != null && trimmed.isNotEmpty) MetaKeys.text: trimmed,
+          ...extra,
         },
       ),
     ];

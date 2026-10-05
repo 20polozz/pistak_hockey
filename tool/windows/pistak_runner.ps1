@@ -29,7 +29,16 @@ $actions = @{
   'web'      = 'flutter build web --release --no-web-resources-cdn'
   'devices'  = 'flutter devices'
   'clean'    = 'flutter clean'
+  # Android emulator / device checks (args validated below)
+  'emulators' = 'flutter emulators'
+  'launchemu' = 'flutter emulators --launch'
+  'install'   = 'flutter install --release -d'
+  'adbdevices' = 'adb devices'
+  'screencap' = 'adb -s'
+  'tap'       = 'adb -s'
+  'launchapp' = 'adb -s'
 }
+$adb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
 
 Write-Host "PISTAK runner listening in $queue (Ctrl+C or close window to stop)"
 while ($true) {
@@ -51,6 +60,21 @@ while ($true) {
   $cmd = $actions[$name]
   if ($name -eq 'test' -and $parts.Count -gt 1) {
     if ($parts[1] -match '^test[\\/][A-Za-z0-9_\\/\.]+$') { $cmd = "$cmd $($parts[1])" }
+  }
+  # Arguments of device actions: only ids / numbers, never free text.
+  $okId = ($parts.Count -gt 1) -and ($parts[1] -match '^[A-Za-z0-9_.:-]+$')
+  $okXY = ($parts.Count -gt 3) -and ($parts[2] -match '^[0-9]+$') -and ($parts[3] -match '^[0-9]+$')
+  if ($name -in @('launchemu','install','screencap','tap','launchapp') -and -not $okId) {
+    Set-Content $log "Missing/invalid device or emulator id"; Set-Content $done '2'; continue
+  }
+  switch ($name) {
+    'launchemu' { $cmd = "flutter emulators --launch $($parts[1])" }
+    'install'   { $cmd = "flutter install --release -d $($parts[1])" }
+    'adbdevices'{ $cmd = "`"$adb`" devices" }
+    'screencap' { $cmd = "`"$adb`" -s $($parts[1]) shell screencap -p /sdcard/pistak_screen.png && `"$adb`" -s $($parts[1]) pull /sdcard/pistak_screen.png `"$out\screen.png`"" }
+    'tap'       { if (-not $okXY) { Set-Content $done '2'; continue }
+                  $cmd = "`"$adb`" -s $($parts[1]) shell input tap $($parts[2]) $($parts[3])" }
+    'launchapp' { $cmd = "`"$adb`" -s $($parts[1]) shell monkey -p cat.pistak.app -c android.intent.category.LAUNCHER 1" }
   }
   Write-Host "[$(Get-Date -Format HH:mm:ss)] $id : $cmd"
   cmd.exe /c "$cmd > `"$log`" 2>&1"

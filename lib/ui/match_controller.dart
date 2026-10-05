@@ -1,9 +1,13 @@
 import '../core/clock.dart';
+import 'dart:typed_data';
+
 import '../core/ids.dart';
+import '../domain/audio/audio_recording.dart';
 import '../domain/match/event_factory.dart';
 import '../domain/match/match_event.dart';
 import '../domain/match/match_projector.dart';
 import '../domain/match/match_state.dart';
+import '../domain/repositories/audio_repository.dart';
 import '../domain/repositories/match_repository.dart';
 
 /// Executes user actions on one match.
@@ -20,6 +24,7 @@ class MatchController {
     required this.deviceId,
     required this.repository,
     required this.clock,
+    this.audio,
     this.ids = const UuidV7Generator(),
     this.projector = const MatchProjector(),
   });
@@ -28,6 +33,7 @@ class MatchController {
   final String deviceId;
   final MatchRepository repository;
   final Clock clock;
+  final AudioRepository? audio;
   final IdGenerator ids;
   final MatchProjector projector;
 
@@ -47,7 +53,7 @@ class MatchController {
 
   Future<List<MatchEvent>> _act(
       List<MatchEvent> Function(EventFactory f, MatchState s) build,
-      {DateTime? at}) {
+      {DateTime? at, Future<void> Function(List<MatchEvent> events)? before}) {
     final tapTime = at ?? clock.now();
     return _serial(() async {
       final state = await currentState();
@@ -59,6 +65,7 @@ class MatchController {
       );
       final events = build(factory, state);
       if (events.isEmpty) return const <MatchEvent>[];
+      if (before != null) await before(events);
       return repository.appendEvents(matchId, events);
     });
   }
@@ -83,10 +90,44 @@ class MatchController {
       _act((f, s) => f.card(s, color, team: team));
   Future<List<MatchEvent>> timeout(TeamSide team) =>
       _act((f, s) => f.timeout(s, team));
-  /// [at] = moment the user pressed INCIDÈNCIA (before typing the text).
+  Future<List<MatchEvent>> endTimeout() => _act((f, s) => f.endTimeout(s));
+
+  /// [at] = moment the user pressed INCIDÈNCIA (before typing/recording).
   Future<List<MatchEvent>> incident(String kind,
-          {String? text, DateTime? at}) =>
-      _act((f, s) => f.incident(s, kind: kind, text: text), at: at);
+          {String? text, DateTime? at, Map<String, dynamic> extra = const {}}) =>
+      _act((f, s) => f.incident(s, kind: kind, text: text, extra: extra),
+          at: at);
+
+  /// Voice incident: the audio is stored locally first, then the incident
+  /// event (pointing to it). Transcription happens later, decoupled.
+  Future<List<MatchEvent>> voiceIncident({
+    required Uint8List bytes,
+    required String mimeType,
+    required Duration duration,
+    required DateTime at,
+  }) {
+    final store = audio;
+    if (store == null) throw StateError('No audio repository configured');
+    final audioId = ids.newId();
+    return _act(
+      (f, s) => f.incident(s, kind: IncidentKinds.voice, extra: {
+        MetaKeys.audioId: audioId,
+        MetaKeys.transcriptStatus: TranscriptStatus.pending.code,
+      }),
+      at: at,
+      before: (events) => store.save(AudioRecording(
+        id: audioId,
+        matchId: matchId,
+        eventId: events.first.id,
+        mimeType: mimeType,
+        duration: duration,
+        sizeBytes: bytes.length,
+        bytes: bytes,
+        createdAt: at,
+        updatedAt: at,
+      )),
+    );
+  }
 
   // corrections
   Future<List<MatchEvent>> undo() =>

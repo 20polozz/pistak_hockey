@@ -8,7 +8,15 @@
 - Python 3 (scripts de `tool/`)
 - Git
 
-## 1. Generar les carpetes de plataforma
+## 0. Treballar amb Claude (executor local)
+
+`PISTAK_RUNNER.bat` (doble clic, deixa la finestra oberta) executa **només** una llista tancada
+d'accions Flutter (`tool/windows/pistak_runner.ps1`): `pubget`, `codegen`, `l10n`, `analyze`, `test`,
+`apk`, `web`, `doctor`, `create`, `clean`, i per a Android `emulators`, `launchemu`, `install`,
+`launchapp`, `screencap`, `tap`. No accepta ordres lliures. Les feines arriben com a fitxers a
+`.runner/queue` i els resultats queden a `.runner/out` (ignorat per Git). Tanca la finestra per aturar-lo.
+
+## 1. Generar les carpetes de plataforma (ja fet)
 
 El repositori conté el codi (`lib/`, `test/`, `web/index.html`, `web/manifest.json`…), però no les
 carpetes generades per Flutter. Executa **una vegada**:
@@ -19,18 +27,20 @@ rm test/widget_test.dart   # plantilla de Flutter que no compila amb PISTAK
 ```
 
 `flutter create` no sobreescriu fitxers existents. Després:
-- `android/app/src/main/AndroidManifest.xml` → `android:label="PISTAK"`.
+- `android/app/src/main/AndroidManifest.xml` → `android:label="PISTAK"` + permís `RECORD_AUDIO`.
+- Android necessita l'**NDK 28.2.13676358** (Android Studio → Settings → Android SDK → SDK Tools →
+  NDK (Side by side) → Show package details). Ja està instal·lat en aquest PC.
 
 ## 2. Dependències i codi generat
 
 ```bash
 flutter pub get                                           # també genera la localització (gen-l10n)
-dart run build_runner build --delete-conflicting-outputs  # genera app_database.g.dart (Drift)
+dart run build_runner build   # genera app_database.g.dart (Drift)
 ```
 
 Mentre desenvolupes: `dart run build_runner watch --delete-conflicting-outputs`.
 
-## 3. Fitxers de base de dades per a la web (obligatori per a web)
+## 3. Fitxers de base de dades per a la web (ja inclosos: sqlite3 2.9.4 · drift 2.31.0)
 
 Drift a la web necessita dos fitxers a `web/` amb versions **compatibles** amb `pubspec.lock`:
 
@@ -61,7 +71,8 @@ flutter test test/domain          # cronòmetre i esdeveniments (Dart pur)
 flutter test test/data            # BD real + test crític offline/sync
 ```
 
-Els tests de `test/data` usen SQLite natiu de l'ordinador:
+Els tests de `test/data` usen SQLite natiu de l'ordinador (a Windows ja funciona amb les
+dependències actuals; si algun dia falla):
 - **Linux**: `sudo apt install libsqlite3-dev`
 - **macOS**: inclòs
 - **Windows**: descarrega `sqlite3.dll` (sqlite.org → *Precompiled Binaries for Windows*, 64-bit)

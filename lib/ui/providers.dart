@@ -3,13 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/auth_service.dart';
 import '../core/clock.dart';
 import '../data/db/app_database.dart';
+import '../data/repositories/drift_audio_repository.dart';
 import '../data/repositories/drift_match_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../domain/match/match_event.dart';
 import '../domain/match/match_info.dart';
 import '../domain/match/match_projector.dart';
 import '../domain/match/match_state.dart';
+import '../domain/audio/audio_recording.dart';
+import '../domain/repositories/audio_repository.dart';
 import '../domain/repositories/match_repository.dart';
+import '../domain/sport/match_format.dart';
+import '../services/audio/audio_playback_service.dart';
+import '../services/transcription/transcription_queue.dart';
+import '../services/transcription/transcription_service.dart';
 import '../services/match_session_service.dart';
 import '../sync/remote_sync_api.dart';
 import '../sync/sync_engine.dart';
@@ -32,6 +39,34 @@ final matchRepositoryProvider = Provider<MatchRepository>((ref) =>
       deviceId: ref.watch(deviceIdProvider),
       clock: ref.watch(clockProvider),
     ));
+
+final audioRepositoryProvider = Provider<AudioRepository>((ref) =>
+    DriftAudioRepository(ref.watch(databaseProvider),
+        clock: ref.watch(clockProvider)));
+
+/// Phase 4 replaces this with the backend Speech-to-Text client.
+final transcriptionServiceProvider =
+    Provider<TranscriptionService>((ref) => const NoTranscriptionService());
+
+final transcriptionQueueProvider = Provider<TranscriptionQueue>((ref) =>
+    TranscriptionQueue(
+      audio: ref.watch(audioRepositoryProvider),
+      service: ref.watch(transcriptionServiceProvider),
+      languageCode: ref.watch(localeCodeProvider),
+    ));
+
+final playbackServiceProvider = Provider<AudioPlaybackService>((ref) {
+  final s = AudioPlaybackService();
+  ref.onDispose(s.stop);
+  return s;
+});
+
+final matchAudioProvider = StreamProvider.family<List<AudioRecording>, String>(
+    (ref, id) => ref.watch(audioRepositoryProvider).watchByMatch(id));
+
+/// User-defined categories (named formats). Invalidate after edits.
+final categoriesProvider = FutureProvider<List<MatchFormat>>(
+    (ref) => ref.watch(settingsRepositoryProvider).categories());
 
 final authServiceProvider =
     Provider<AuthService>((ref) => const GuestAuthService());
@@ -110,4 +145,5 @@ final matchControllerProvider =
           deviceId: ref.watch(deviceIdProvider),
           repository: ref.watch(matchRepositoryProvider),
           clock: ref.watch(clockProvider),
+          audio: ref.watch(audioRepositoryProvider),
         ));

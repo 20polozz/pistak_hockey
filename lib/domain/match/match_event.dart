@@ -14,6 +14,7 @@ abstract final class EventTypes {
   static const foul = 'FOUL';
   static const card = 'CARD';
   static const timeout = 'TIMEOUT';
+  static const timeoutEnd = 'TIMEOUT_END';
   static const incident = 'INCIDENT';
 
   /// Events that change the clock / match phase.
@@ -45,11 +46,17 @@ abstract final class PauseReasons {
   static const timeout = 'timeout';
 }
 
+abstract final class ResumeReasons {
+  static const timeoutEnd = 'timeout_end';
+}
+
 /// Metadata keys used by the core.
 abstract final class MetaKeys {
   static const text = 'text';
   static const periodElapsedMs = 'periodElapsedMs';
   static const forced = 'forced';
+  static const audioId = 'audioId';
+  static const transcriptStatus = 'transcriptStatus';
 }
 
 enum TeamSide {

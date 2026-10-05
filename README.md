@@ -1,6 +1,6 @@
 # PISTAK
 
-**Matchday made simple.** — *Live match tracking for roller hockey*
+**Live match tracking for roller hockey** — *PISTAK, Matchday made simple.*
 
 PISTAK registra en temps real tot el que passa en un partit (gols, faltes, targetes, temps morts,
 pauses, descans, incidències…) amb una cronologia precisa. Primera especialització: **hoquei patins**.
@@ -13,10 +13,10 @@ Arquitectura preparada per a altres esports de pista.
 
 | Fase | Contingut | Estat |
 |------|-----------|-------|
-| 1 — Core | Offline-first, partit sense títol, cronòmetre, esdeveniments, cronologia, desfer, autosave, recuperació | ✅ Implementada (pendent de primera compilació) |
+| 1 — Core | Offline-first, partit sense títol, cronòmetre, esdeveniments, temps morts (inici/fi), incidències escrites i **de veu**, cronologia editable, desfer, autosave, recuperació, categories configurables, export CSV/JSON | ✅ Compila (Android + Web), 44 tests en verd |
 | 2 — Comptes i núvol | Registre, login, equips, partits programats, backend, sincronització | Preparada (contractes `RemoteSyncApi`, `AuthService`, outbox) |
-| 3 — Informes | PDF, CSV, JSON, estadístiques | Vista de resum bàsica feta |
-| 4 — Àudio | Gravació, transcripció | Dissenyada |
+| 3 — Informes | PDF, estadístiques avançades | Resum + export CSV/JSON fets; falta PDF |
+| 4 — Àudio | Speech-to-Text real (backend) | Gravació local + cua de transcripció ja fetes; falta el servei |
 | 5 — Wear OS | App Kotlin al rellotge | Dissenyada |
 | 6 — Polish | Animacions, icona, splash… | — |
 
@@ -29,10 +29,8 @@ Arquitectura preparada per a altres esports de pista.
 ## Inici ràpid
 
 ```bash
-flutter create . --project-name pistak --org cat.pistak --platforms android,web
-rm test/widget_test.dart                     # el genera flutter create; no el fem servir
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 flutter test
 flutter run -d chrome     # o un dispositiu Android
 ```

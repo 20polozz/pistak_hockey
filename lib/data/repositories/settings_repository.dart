@@ -18,6 +18,7 @@ class SettingsRepository {
   static const _localeKey = 'locale';
   static const _onboardingKey = 'onboarding_done';
   static const _lastFormatKey = 'last_format';
+  static const _categoriesKey = 'categories';
 
   Future<String?> get(String key) async {
     final row = await (db.select(db.appSettings)
@@ -67,4 +68,33 @@ class SettingsRepository {
 
   Future<void> setLastFormat(MatchFormat f) =>
       set(_lastFormatKey, jsonEncode(f.toJson()));
+
+  /// User-defined categories (named match formats), e.g. "Aleví 2×15".
+  Future<List<MatchFormat>> categories() async {
+    final raw = await get(_categoriesKey);
+    if (raw == null) return const [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => MatchFormat.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> saveCategory(MatchFormat f) async {
+    final list = [...await categories()];
+    final i = list.indexWhere((c) => c.id == f.id);
+    if (i >= 0) {
+      list[i] = f;
+    } else {
+      list.add(f);
+    }
+    await set(_categoriesKey, jsonEncode([for (final c in list) c.toJson()]));
+  }
+
+  Future<void> deleteCategory(String id) async {
+    final list = (await categories()).where((c) => c.id != id).toList();
+    await set(_categoriesKey, jsonEncode([for (final c in list) c.toJson()]));
+  }
 }

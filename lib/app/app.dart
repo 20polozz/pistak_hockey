@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,13 +10,40 @@ import '../ui/screens/home_screen.dart';
 import '../ui/screens/onboarding_screen.dart';
 import 'theme.dart';
 
-class PistakApp extends ConsumerWidget {
+class PistakApp extends ConsumerStatefulWidget {
   const PistakApp({super.key, required this.onboardingDone});
 
   final bool onboardingDone;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PistakApp> createState() => _PistakAppState();
+}
+
+class _PistakAppState extends ConsumerState<PistakApp> {
+  Timer? _background;
+
+  @override
+  void initState() {
+    super.initState();
+    // Background work that never blocks recording: pending transcriptions
+    // (and, from Phase 2, the cloud sync engine).
+    _tick();
+    _background =
+        Timer.periodic(const Duration(minutes: 2), (_) => _tick());
+  }
+
+  void _tick() {
+    ref.read(transcriptionQueueProvider).processPending().ignore();
+  }
+
+  @override
+  void dispose() {
+    _background?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final code = ref.watch(localeCodeProvider);
     return MaterialApp(
       title: 'PISTAK',
@@ -39,7 +68,9 @@ class PistakApp extends ConsumerWidget {
         }
         return const Locale('ca');
       },
-      home: onboardingDone ? const HomeScreen() : const OnboardingScreen(),
+      home: widget.onboardingDone
+          ? const HomeScreen()
+          : const OnboardingScreen(),
     );
   }
 }

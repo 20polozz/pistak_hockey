@@ -14,6 +14,7 @@ import '../widgets/event_button.dart';
 import '../widgets/event_labels.dart';
 import '../widgets/sync_badge.dart';
 import '../widgets/ticker.dart';
+import '../widgets/voice_recorder_dialog.dart';
 import 'match_details_screen.dart';
 import 'match_summary_screen.dart';
 import 'timeline_screen.dart';
@@ -89,7 +90,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         actions: [
-          const SyncBadge(),
+          SyncBadge(compact: MediaQuery.sizeOf(context).width < 600),
           IconButton(
             tooltip: l.timeline,
             icon: const Icon(Icons.timeline),
@@ -111,26 +112,56 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         ],
       ),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              child: Column(
+        child: LayoutBuilder(builder: (context, c) {
+          final banner = _Banner(
+              view: v, onEndTimeout: () => _run((c) => c.endTimeout()));
+          // Tablets / desktop browsers in landscape: info left, buttons right.
+          if (c.maxWidth >= 900 && c.maxWidth > c.maxHeight) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Scoreboard(view: v),
-                  _Banner(view: v),
-                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: 380,
+                    child: Column(
+                      children: [
+                        _Scoreboard(view: v),
+                        banner,
+                        const Spacer(),
+                        _controls(l, v),
+                        const SizedBox(height: 8),
+                        _lastEventBar(l, v),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
                   Expanded(child: _grid(l, v)),
-                  const SizedBox(height: 8),
-                  _controls(l, v),
-                  const SizedBox(height: 8),
-                  _lastEventBar(l, v),
                 ],
               ),
+            );
+          }
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Column(
+                  children: [
+                    _Scoreboard(view: v),
+                    banner,
+                    const SizedBox(height: 8),
+                    Expanded(child: _grid(l, v)),
+                    const SizedBox(height: 8),
+                    _controls(l, v),
+                    const SizedBox(height: 8),
+                    _lastEventBar(l, v),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        }),
       ),
     );
   }
@@ -333,7 +364,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     final (color, icon) = eventVisual(last);
     final needsTeam = last.type == EventTypes.card && last.team == null;
     final team = last.team;
-    return Container(
+    final bar = Container(
       padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
       decoration: BoxDecoration(
         color: PistakColors.surfaceHigh,
@@ -352,18 +383,6 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-          if (needsTeam) ...[
-            _MiniTeamButton(
-              label: l.homeUpper,
-              color: PistakColors.home,
-              onTap: () => _run((c) => c.setTeam(last, TeamSide.home)),
-            ),
-            _MiniTeamButton(
-              label: l.awayUpper,
-              color: PistakColors.away,
-              onTap: () => _run((c) => c.setTeam(last, TeamSide.away)),
-            ),
-          ],
           TextButton.icon(
             onPressed: () => _undo(l),
             icon: const Icon(Icons.undo),
@@ -371,6 +390,34 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           ),
         ],
       ),
+    );
+    if (!needsTeam) return bar;
+    // One-tap card: optional team assignment right below, never blocking.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(l.assignTeam,
+                  style: const TextStyle(
+                      fontSize: 13, color: PistakColors.textMuted)),
+            ),
+            _MiniTeamButton(
+              label: teamName(l, v.info, TeamSide.home).toUpperCase(),
+              color: PistakColors.home,
+              onTap: () => _run((c) => c.setTeam(last, TeamSide.home)),
+            ),
+            _MiniTeamButton(
+              label: teamName(l, v.info, TeamSide.away).toUpperCase(),
+              color: PistakColors.away,
+              onTap: () => _run((c) => c.setTeam(last, TeamSide.away)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        bar,
+      ],
     );
   }
 
@@ -449,9 +496,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             ),
             ListTile(
               minTileHeight: 64,
-              enabled: false,
               leading: const Icon(Icons.mic_none),
-              title: Text(l.incidentVoiceSoon),
+              title: Text(l.incidentVoice),
+              subtitle: Text(l.incidentVoiceHint),
+              onTap: () => Navigator.pop(ctx, IncidentKinds.voice),
             ),
           ],
         ),
@@ -460,6 +508,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     if (!mounted || choice == null) return;
     if (choice == IncidentKinds.unjustified) {
       await _run((c) => c.incident(IncidentKinds.unjustified, at: at));
+      return;
+    }
+    if (choice == IncidentKinds.voice) {
+      await _recordVoice(l, at);
       return;
     }
     final text = await _askText(l.incidentWritten, l.incidentWrittenHint);
@@ -471,6 +523,29 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             : IncidentKinds.text,
         text: text,
         at: at));
+  }
+
+  Future<void> _recordVoice(AppLocalizations l, DateTime at) async {
+    final result = await VoiceRecorderDialog.show(context);
+    if (!mounted) return;
+    final audio = result?.audio;
+    if (audio != null && audio.wav.length > 44) {
+      await _run((c) => c.voiceIncident(
+            bytes: audio.wav,
+            mimeType: audio.mimeType,
+            duration: audio.duration,
+            at: at,
+          ));
+      // Try to transcribe in the background (no-op while offline).
+      ref.read(transcriptionQueueProvider).processPending();
+      return;
+    }
+    // No audio (cancelled, no permission, no mic): the moment is still kept.
+    await _run((c) => c.incident(IncidentKinds.unjustified, at: at));
+    if (result?.error != null && mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.micUnavailable)));
+    }
   }
 
   Future<String?> _askText(String title, String hint) {
@@ -679,20 +754,30 @@ class _TeamScore extends StatelessWidget {
 
 /// Timeout countdown or break timer.
 class _Banner extends StatelessWidget {
-  const _Banner({required this.view});
+  const _Banner({required this.view, required this.onEndTimeout});
   final MatchView view;
+  final VoidCallback onEndTimeout;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final s = view.state;
     final timeout = s.activeTimeout;
-    if (s.phase == MatchPhase.paused && timeout != null) {
+    if (s.isInPlay && timeout != null) {
       return _bar(
         PistakColors.warning,
         Icons.timer_outlined,
         (now) => l.timeoutBanner(teamName(l, view.info, timeout.team),
             formatMatchTime(s.timeoutRemainingAt(now) ?? Duration.zero)),
+        action: FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: PistakColors.warning,
+            foregroundColor: Colors.black,
+            minimumSize: const Size(0, 44),
+          ),
+          onPressed: onEndTimeout,
+          child: Text(l.endTimeout),
+        ),
       );
     }
     if (s.phase == MatchPhase.onBreak) {
@@ -706,7 +791,8 @@ class _Banner extends StatelessWidget {
     return const SizedBox.shrink();
   }
 
-  Widget _bar(Color color, IconData icon, String Function(DateTime) text) =>
+  Widget _bar(Color color, IconData icon, String Function(DateTime) text,
+          {Widget? action}) =>
       Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Container(
@@ -729,6 +815,7 @@ class _Banner extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                           fontFeatures: tabularFigures)),
                 ),
+                if (action != null) action,
               ],
             ),
           ),

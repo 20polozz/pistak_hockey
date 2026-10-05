@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../core/time_format.dart';
 import '../../domain/match/match_event.dart';
 import '../../domain/match/match_state.dart';
+import '../../domain/report/match_report.dart';
+import '../../domain/report/report_exporter.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers.dart';
 import '../widgets/event_labels.dart';
@@ -25,6 +28,28 @@ class MatchSummaryScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l.summary),
         actions: [
+          if (view.valueOrNull != null)
+            PopupMenuButton<ReportExporter>(
+              tooltip: l.exportAction,
+              icon: const Icon(Icons.ios_share),
+              onSelected: (exporter) async {
+                final v = view.valueOrNull!;
+                final text = exporter
+                    .export(MatchReport.build(v.info, v.events));
+                await Clipboard.setData(ClipboardData(text: text));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(
+                          l.exportCopied(exporter.id.toUpperCase()))));
+                }
+              },
+              itemBuilder: (_) => [
+                for (final e in reportExporters)
+                  PopupMenuItem(
+                      value: e,
+                      child: Text('${l.exportAction} ${e.id.toUpperCase()}')),
+              ],
+            ),
           IconButton(
             tooltip: l.edit,
             icon: const Icon(Icons.edit_outlined),

@@ -232,5 +232,37 @@
   "timeoutsShort": "TO",
   "tapStartHint": "Tap START MATCH to run the clock. Events can be recorded at any time.",
   "edit": "Edit",
+  "endTimeout": "END TIMEOUT",
+  "evTimeoutEnd": "End of timeout",
+  "evResumeAfterTimeout": "Clock resumed (after timeout)",
+  "incidentVoice": "Voice incident",
+  "incidentVoiceHint": "Record a short audio. It is saved on this device and can be transcribed later.",
+  "recording": "Recording…",
+  "stopAndSave": "STOP AND SAVE",
+  "micUnavailable": "Microphone not available. The incident was recorded without audio.",
+  "micPrivacy": "Audio may contain personal data. It stays on this device until you sync it, and you can delete it at any time.",
+  "transcriptPending": "Transcription pending",
+  "transcriptFailed": "Transcription failed (audio kept)",
+  "playAudio": "Play audio",
+  "stopAudio": "Stop",
+  "deleteAudio": "Delete audio",
+  "audioDeleted": "Audio deleted",
+  "exportAction": "Export",
+  "exportCopied": "{format} copied to the clipboard",
+  "@exportCopied": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "categories": "Categories",
+  "categoriesHint": "Each category defines periods, durations and timeouts. Matches keep a copy, so editing a category never changes past matches.",
+  "newCategory": "New category",
+  "categoryName": "Name",
+  "noCategories": "No categories yet.",
+  "formatTimeoutSeconds": "Timeout (seconds)",
+  "formatTimeoutsPerPeriod": "Timeouts per team and period",
+  "builtInFormats": "Built-in formats",
   "savedLocally": "Saved on this device"
 }
