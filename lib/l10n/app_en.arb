@@ -391,5 +391,6 @@
     }
   },
   "statusScheduled": "Scheduled",
+  "copyCsv": "Copy CSV to clipboard",
   "savedLocally": "Saved on this device"
 }

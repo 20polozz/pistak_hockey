@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,8 @@ import '../../domain/match/match_state.dart';
 import '../../domain/report/match_report.dart';
 import '../../domain/report/report_exporter.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/export/file_sharer.dart';
+import '../../services/export/pdf_report.dart';
 import '../providers.dart';
 import '../widgets/event_labels.dart';
 import 'match_details_screen.dart';
@@ -29,25 +33,17 @@ class MatchSummaryScreen extends ConsumerWidget {
         title: Text(l.summary),
         actions: [
           if (view.valueOrNull != null)
-            PopupMenuButton<ReportExporter>(
+            PopupMenuButton<String>(
               tooltip: l.exportAction,
               icon: const Icon(Icons.ios_share),
-              onSelected: (exporter) async {
-                final v = view.valueOrNull!;
-                final text =
-                    exporter.export(MatchReport.build(v.info, v.events));
-                await Clipboard.setData(ClipboardData(text: text));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content:
-                          Text(l.exportCopied(exporter.id.toUpperCase()))));
-                }
-              },
+              onSelected: (format) =>
+                  _export(context, l, view.valueOrNull!, format),
               itemBuilder: (_) => [
-                for (final e in reportExporters)
+                for (final f in const ['pdf', 'csv', 'json'])
                   PopupMenuItem(
-                      value: e,
-                      child: Text('${l.exportAction} ${e.id.toUpperCase()}')),
+                      value: f,
+                      child: Text('${l.exportAction} ${f.toUpperCase()}')),
+                PopupMenuItem(value: 'copy-csv', child: Text(l.copyCsv)),
               ],
             ),
           IconButton(
@@ -111,6 +107,93 @@ class MatchSummaryScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _export(BuildContext context, AppLocalizations l, MatchView v,
+      String format) async {
+    final report = MatchReport.build(v.info, v.events);
+    final title = matchTitle(l, v.info);
+    final date = v.info.displayDate;
+    if (format == 'copy-csv') {
+      await Clipboard.setData(
+          ClipboardData(text: const CsvReportExporter().export(report)));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l.exportCopied('CSV'))));
+      }
+      return;
+    }
+    final Uint8List bytes;
+    final String mime;
+    if (format == 'pdf') {
+      bytes = await const PdfReportExporter()
+          .build(report, _pdfLabels(l, v, title));
+      mime = 'application/pdf';
+    } else {
+      final ex = reportExporters.firstWhere((e) => e.id == format);
+      bytes = Uint8List.fromList(utf8.encode(ex.export(report)));
+      mime = ex.mimeType;
+    }
+    try {
+      await const FileSharer().share(bytes,
+          fileName: reportFileName(title, date, format), mimeType: mime);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$e')));
+      }
+    }
+  }
+
+  ReportLabels _pdfLabels(AppLocalizations l, MatchView v, String title) {
+    final s = v.state;
+    int cards(TeamSide t, String c) => s.tally(t).cardsOf(c);
+    return ReportLabels(
+      title: title,
+      home: teamName(l, v.info, TeamSide.home),
+      away: teamName(l, v.info, TeamSide.away),
+      generalInfo: l.generalInfo,
+      statistics: l.statistics,
+      timeline: l.timeline,
+      incidents: l.incidentsSection,
+      info: [
+        for (final (k, val) in _generalRows(l, v))
+          if (val != null) (k, val),
+      ],
+      stats: [
+        (l.statGoals, '${s.home.goals}', '${s.away.goals}'),
+        (l.statFouls, '${s.home.fouls}', '${s.away.fouls}'),
+        (
+          l.statYellow,
+          '${cards(TeamSide.home, CardColors.yellow)}',
+          '${cards(TeamSide.away, CardColors.yellow)}'
+        ),
+        (
+          l.statBlue,
+          '${cards(TeamSide.home, CardColors.blue)}',
+          '${cards(TeamSide.away, CardColors.blue)}'
+        ),
+        (
+          l.statRed,
+          '${cards(TeamSide.home, CardColors.red)}',
+          '${cards(TeamSide.away, CardColors.red)}'
+        ),
+        (l.statTimeouts, '${s.home.timeouts}', '${s.away.timeouts}'),
+        if (s.hadShootout)
+          (
+            l.statShootout,
+            '${s.home.shootoutScored}',
+            '${s.away.shootoutScored}'
+          ),
+        (l.statIncidents, '${s.incidents}', ''),
+        (l.statPauses, '${s.pauses}', ''),
+      ],
+      eventLabel: (e) => eventLabel(l, e),
+      generatedWith: 'PISTAK · ${l.tagline}',
+      shootout: s.hadShootout
+          ? l.shootoutScore(s.home.shootoutScored, s.away.shootoutScored)
+          : null,
+    );
+  }
+
   List<MatchEvent> _incidents(MatchView v) =>
       v.activeEvents.where((e) => e.type == EventTypes.incident).toList();
 
@@ -164,10 +247,10 @@ class MatchSummaryScreen extends ConsumerWidget {
         ),
       );
 
-  Widget _general(AppLocalizations l, MatchView v) {
+  List<(String, String?)> _generalRows(AppLocalizations l, MatchView v) {
     final i = v.info;
     final s = v.state;
-    final rows = <(String, String?)>[
+    return <(String, String?)>[
       (l.fieldCategory, i.category),
       (l.fieldCompetition, i.competition),
       (l.fieldSeason, i.season),
@@ -188,6 +271,10 @@ class MatchSummaryScreen extends ConsumerWidget {
       (l.fieldFormat, i.format.name),
       (l.fieldNotes, i.notes),
     ];
+  }
+
+  Widget _general(AppLocalizations l, MatchView v) {
+    final rows = _generalRows(l, v);
     return Column(
       children: [
         for (final r in rows)

@@ -253,6 +253,7 @@ S = {
 'noResults': ('No matches with these filters.', 'Cap partit amb aquests filtres.', 'Ningún partido con estos filtros.'),
 'scheduledFor': ('Scheduled · {date}', 'Programat · {date}', 'Programado · {date}'),
 'statusScheduled': ('Scheduled', 'Programat', 'Programado'),
+'copyCsv': ('Copy CSV to clipboard', 'Copiar CSV al porta-retalls', 'Copiar CSV al portapapeles'),
 'savedLocally': ('Saved on this device', 'Guardat en aquest dispositiu', 'Guardado en este dispositivo'),
 }
 

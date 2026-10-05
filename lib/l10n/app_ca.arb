@@ -232,5 +232,6 @@
   "noResults": "Cap partit amb aquests filtres.",
   "scheduledFor": "Programat · {date}",
   "statusScheduled": "Programat",
+  "copyCsv": "Copiar CSV al porta-retalls",
   "savedLocally": "Guardat en aquest dispositiu"
 }

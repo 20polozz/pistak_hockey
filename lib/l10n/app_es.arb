@@ -232,5 +232,6 @@
   "noResults": "Ningún partido con estos filtros.",
   "scheduledFor": "Programado · {date}",
   "statusScheduled": "Programado",
+  "copyCsv": "Copiar CSV al portapapeles",
   "savedLocally": "Guardado en este dispositivo"
 }
