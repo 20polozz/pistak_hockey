@@ -466,7 +466,7 @@
   "skip": "Skip",
   "teamOnly": "Team only",
   "storageVolatile": "This browser cannot save data permanently (private mode?). What you record will be LOST when you close the tab. Use the Android app or a normal Chrome/Edge/Firefox window.",
-  "storageMayBeEvicted": "The browser may delete local data if the device runs out of space. Sign in to keep a copy in the cloud, or install the app.",
+  "storageMayBeEvicted": "The browser may delete local data if the device runs out of space. Add the app to your home screen and make backups (Settings).",
   "storageSection": "Storage on this device",
   "storageDevice": "Saved on the device (SQLite)",
   "storageOpfs": "Saved in the browser (OPFS)",

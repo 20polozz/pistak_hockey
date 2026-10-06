@@ -293,7 +293,7 @@
   "skip": "Omitir",
   "teamOnly": "Solo el equipo",
   "storageVolatile": "Este navegador no puede guardar datos de forma permanente (¿modo privado?). Lo que registres se PERDERÁ al cerrar la pestaña. Usa la app de Android o una ventana normal de Chrome/Edge/Firefox.",
-  "storageMayBeEvicted": "El navegador puede borrar los datos locales si el dispositivo se queda sin espacio. Inicia sesión para tener copia en la nube, o instala la app.",
+  "storageMayBeEvicted": "El navegador puede borrar los datos si el dispositivo se queda sin espacio. Añade la app a la pantalla de inicio y haz copias de seguridad (Configuración).",
   "storageSection": "Almacenamiento en este dispositivo",
   "storageDevice": "Guardado en el dispositivo (SQLite)",
   "storageOpfs": "Guardado en el navegador (OPFS)",

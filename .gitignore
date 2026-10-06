@@ -41,3 +41,6 @@ CLAU_SIGNATURA_NO_COMPARTIR/
 
 # Built APKs ready to share
 APK_PER_COMPARTIR/
+
+# Web build ready to upload (Cloudflare Pages)
+WEB_PER_PUJAR/

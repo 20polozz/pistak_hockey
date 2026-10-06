@@ -293,7 +293,7 @@
   "skip": "Ometre",
   "teamOnly": "Només l'equip",
   "storageVolatile": "Aquest navegador no pot guardar dades de manera permanent (mode privat?). El que registris es PERDRÀ en tancar la pestanya. Fes servir l'app d'Android o una finestra normal de Chrome/Edge/Firefox.",
-  "storageMayBeEvicted": "El navegador pot esborrar les dades locals si el dispositiu es queda sense espai. Inicia sessió per tenir-ne còpia al núvol, o instal·la l'app.",
+  "storageMayBeEvicted": "El navegador pot esborrar les dades si el dispositiu es queda sense espai. Afegeix l'app a la pantalla d'inici i fes còpies de seguretat (Configuració).",
   "storageSection": "Emmagatzematge en aquest dispositiu",
   "storageDevice": "Guardat al dispositiu (SQLite)",
   "storageOpfs": "Guardat al navegador (OPFS)",
