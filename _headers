@@ -1,0 +1,11 @@
+# Netlify / Cloudflare Pages headers.
+# COOP/COEP enable cross-origin isolation so drift can use OPFS (most
+# durable web storage). See docs/DEPLOYMENT.md.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: credentialless
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/sqlite3.wasm
+  Content-Type: application/wasm
