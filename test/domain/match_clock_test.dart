@@ -139,14 +139,14 @@ void main() {
       expect(sim.run((f, s) => f.startNextPeriod(s)), isEmpty);
     });
 
-    test('formats are configurable (2 × 15)', () {
-      final sim = Sim(format: rollerHockey.formatById('rh_2x15'));
+    test('formats are configurable (Benjamí 2 × 18)', () {
+      final sim = Sim(format: rollerHockey.formatById('rh_benjami'));
       sim.run((f, s) => f.startMatch(s));
-      sim.waitMs(15);
+      sim.waitMs(18);
       sim.run((f, s) => f.endPeriod(s));
       sim.run((f, s) => f.startNextPeriod(s));
       sim.waitMs(1);
-      expect(sim.shown, '16:00');
+      expect(sim.shown, '19:00');
     });
 
     test('3 periods × 10 min with two breaks', () {

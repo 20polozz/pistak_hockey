@@ -1,7 +1,7 @@
 name: pistak
 description: "PISTAK — Matchday made simple. Live match tracking for roller hockey."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.6.0

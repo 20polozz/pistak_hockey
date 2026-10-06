@@ -257,6 +257,10 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
         DateTime(date.year, date.month, date.day, t.hour, t.minute).toUtc());
   }
 
+  /// "2 × 25'" / "4 × 8'".
+  static String _formatShort(MatchFormat f) =>
+      "${f.periods} × ${f.periodDuration.inMinutes}'";
+
   Widget _formatSection(AppLocalizations l, MatchInfo info) {
     final sport = Sports.byId(info.sport);
     final locked = info.status != MatchStatus.notStarted;
@@ -282,27 +286,42 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
                     style: const TextStyle(color: PistakColors.textMuted)),
               ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
+            DropdownButtonFormField<String>(
+              initialValue: selected,
+              isExpanded: true,
+              decoration: InputDecoration(labelText: l.fieldFormat),
+              items: [
                 for (final f in options)
-                  ChoiceChip(
-                    label: Text(f.name),
-                    selected: selected == f.id,
-                    onSelected:
-                        locked ? null : (_) => setState(() => _setFormat(f)),
+                  DropdownMenuItem(
+                    value: f.id,
+                    child: Text('${f.name} · ${_formatShort(f)}',
+                        overflow: TextOverflow.ellipsis),
                   ),
-                ChoiceChip(
-                  label: Text(l.formatCustom),
-                  selected: isCustom,
-                  onSelected: locked
-                      ? null
-                      : (_) => setState(() => _format = _format.copyWith(
-                          id: _customId, name: l.formatCustom)),
-                ),
+                DropdownMenuItem(value: _customId, child: Text(l.formatCustom)),
               ],
+              onChanged: locked
+                  ? null
+                  : (id) => setState(() {
+                        if (id == _customId) {
+                          _format = _format.copyWith(
+                              id: _customId, name: l.formatCustom);
+                          return;
+                        }
+                        final f = options.firstWhere((o) => o.id == id);
+                        // The category name follows the chosen preset unless
+                        // the user typed a different one.
+                        final typed = _category.text.trim();
+                        if (typed.isEmpty ||
+                            options.any((o) => o.name == typed)) {
+                          _category.text = f.name;
+                        }
+                        _setFormat(f);
+                      }),
             ),
+            const SizedBox(height: 4),
+            if (!isCustom)
+              Text(_formatShort(_format),
+                  style: const TextStyle(color: PistakColors.textMuted)),
             if (isCustom) ...[
               const SizedBox(height: 12),
               Row(children: [
@@ -407,7 +426,10 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
       clearHomeTeam: _homeTeamId == null,
       clearAwayTeam: _awayTeamId == null,
       awayName: _away.text,
-      category: _category.text,
+      // Empty category + a preset format → the preset's name (filters/stats).
+      category: _category.text.trim().isEmpty && format.id != _customId
+          ? format.name
+          : _category.text,
       competition: _competition.text,
       venue: _venue.text,
       season: _season.text,
