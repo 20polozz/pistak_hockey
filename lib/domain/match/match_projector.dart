@@ -17,7 +17,9 @@ class MatchProjector {
       ..sort(compareEvents);
     for (final e in active) {
       _apply(state, e);
-      state.lastEvent = e;
+      // The main event of the last action (a goal, not the automatic pause
+      // it caused): events of one action share its actionId.
+      if (state.lastEvent?.actionId != e.actionId) state.lastEvent = e;
     }
     return state;
   }

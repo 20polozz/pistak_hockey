@@ -13,6 +13,11 @@ import 'package:pistak/domain/report/match_report.dart';
 import 'package:pistak/domain/report/report_exporter.dart';
 import 'package:pistak/domain/sport/roller_hockey.dart';
 
+/// Continuous clock: these tests are about other things than the automatic
+/// stops of effective time (see test/domain/effective_time_test.dart).
+final continuousTime =
+    rollerHockey.defaultFormat.copyWith(stopClockOnEvents: false);
+
 void main() {
   group('WAV', () {
     test('header describes PCM16 mono 16 kHz', () {
@@ -43,7 +48,7 @@ void main() {
     final info = MatchInfo(
       id: 'm1',
       sport: rollerHockey.id,
-      format: rollerHockey.defaultFormat,
+      format: continuousTime,
       homeName: 'CP Exemple',
       awayName: 'HC Exemple',
       createdAt: clock.now(),

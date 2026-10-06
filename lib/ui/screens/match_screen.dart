@@ -53,6 +53,85 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
       ref.read(matchControllerProvider(widget.matchId));
 
   /// Runs an action with immediate haptic feedback; errors are always shown.
+  /// Records an action, then (if that side is one of my teams with a
+  /// roster) asks who did it. The event is already saved: asking never
+  /// blocks or delays the recording, and can be skipped.
+  Future<void> _record(
+      Future<List<MatchEvent>> Function(MatchController c) action,
+      {bool heavy = false}) async {
+    List<MatchEvent>? events;
+    await _run((c) async => events = await action(c), heavy: heavy);
+    final main = events?.firstOrNull;
+    if (main == null || !mounted) return;
+    await _askWho(main);
+  }
+
+  Future<void> _askWho(MatchEvent e) async {
+    final view = ref.read(matchViewProvider(widget.matchId)).valueOrNull;
+    if (view == null) return;
+    final info = view.info;
+    final linked = {
+      if (info.homeTeamId != null) TeamSide.home,
+      if (info.awayTeamId != null) TeamSide.away,
+    };
+    final isCard = e.type == EventTypes.card;
+    if (linked.isEmpty || (!isCard && !linked.contains(e.team))) return;
+    if (!isCard &&
+        !const {EventTypes.goal, EventTypes.foul, EventTypes.shot}
+            .contains(e.type)) {
+      return;
+    }
+    final l = AppLocalizations.of(context);
+    final title = switch (e.type) {
+      EventTypes.goal => l.whoScored,
+      EventTypes.foul => l.whoFouled,
+      EventTypes.shot => l.whoShot,
+      _ => l.whoCard,
+    };
+    final who = await showModalBottomSheet<_Who>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _WhoSheet(
+        view: view,
+        title: title,
+        side: e.team,
+        chooseSide: isCard && e.team == null,
+      ),
+    );
+    if (who == null || !mounted) return;
+    final c = _controller;
+    if (isCard && e.team == null && who.side != null) {
+      await _run((c) => c.setTeam(e, who.side));
+    }
+    if (who.player != null) {
+      await _run((c) => c.setMeta(e, {
+            MetaKeys.playerId: who.player!.id,
+            MetaKeys.playerName: who.player!.label,
+          }));
+    }
+    // Goals: then the assist (or "no assist").
+    if (e.type == EventTypes.goal && who.player != null && mounted) {
+      final assist = await showModalBottomSheet<_Who>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (_) => _WhoSheet(
+          view: view,
+          title: l.whoAssisted,
+          side: e.team,
+          exclude: who.player!.id,
+          noneLabel: l.noAssist,
+        ),
+      );
+      if (assist == null) return;
+      await c.setMeta(e, {
+        MetaKeys.assistId: assist.player?.id ?? '',
+        MetaKeys.assistName: assist.player?.label,
+      });
+    }
+  }
+
   Future<void> _run(Future<Object?> Function(MatchController c) action,
       {bool heavy = false}) async {
     heavy ? _session.heavy() : _session.tap();
@@ -198,14 +277,14 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             icon: Icons.sports_hockey,
             color: PistakColors.home,
             filled: true,
-            onTap: () => _run((c) => c.goal(TeamSide.home), heavy: true),
+            onTap: () => _record((c) => c.goal(TeamSide.home), heavy: true),
           ),
           EventButton(
             label: l.goalAway,
             icon: Icons.sports_hockey,
             color: PistakColors.away,
             filled: true,
-            onTap: () => _run((c) => c.goal(TeamSide.away), heavy: true),
+            onTap: () => _record((c) => c.goal(TeamSide.away), heavy: true),
           ),
         ]
       ),
@@ -216,13 +295,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             label: l.foulHome,
             icon: Icons.front_hand,
             color: PistakColors.home,
-            onTap: () => _run((c) => c.foul(TeamSide.home)),
+            onTap: () => _record((c) => c.foul(TeamSide.home)),
           ),
           EventButton(
             label: l.foulAway,
             icon: Icons.front_hand,
             color: PistakColors.away,
-            onTap: () => _run((c) => c.foul(TeamSide.away)),
+            onTap: () => _record((c) => c.foul(TeamSide.away)),
           ),
         ]
       ),
@@ -234,7 +313,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               label: _cardLabel(l, color),
               icon: Icons.style,
               color: cardColor(color),
-              onTap: () => _run((c) => c.card(color)),
+              onTap: () => _record((c) => c.card(color)),
             ),
         ]
       ),
@@ -498,20 +577,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         ],
       ),
     );
-    if (!needsTeam) {
-      // Optional: who scored / assisted / got the card, one tap, inline.
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _QuickPlayerRow(
-            event: last,
-            view: v,
-            onPick: (changes) => _run((c) => c.setMeta(last, changes)),
-          ),
-          bar,
-        ],
-      );
-    }
+    if (!needsTeam) return bar;
     // One-tap card: optional team assignment right below, never blocking.
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -566,7 +632,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     );
     if (result == null) return;
     final (side, k, scored) = result;
-    await _run((c) => c.setPiece(side, kind: k, scored: scored, at: at),
+    await _record((c) => c.setPiece(side, kind: k, scored: scored, at: at),
         heavy: scored);
   }
 
@@ -1175,94 +1241,131 @@ class _SetPieceSheetState extends State<_SetPieceSheet> {
   }
 }
 
-/// After a goal / card with a known team linked to a roster: tap the player
-/// (then, for goals, the assist). Hidden when not applicable or answered.
-class _QuickPlayerRow extends ConsumerWidget {
-  const _QuickPlayerRow(
-      {required this.event, required this.view, required this.onPick});
-  final MatchEvent event;
+class _Who {
+  const _Who({this.side, this.player});
+  final TeamSide? side;
+  final TeamMember? player; // null = team only / no assist
+}
+
+/// "Who was it?": big player buttons of my linked team. Skippable.
+class _WhoSheet extends ConsumerStatefulWidget {
+  const _WhoSheet({
+    required this.view,
+    required this.title,
+    this.side,
+    this.chooseSide = false,
+    this.exclude,
+    this.noneLabel,
+  });
   final MatchView view;
-  final void Function(Map<String, Object?> changes) onPick;
+  final String title;
+  final TeamSide? side;
+  final bool chooseSide;
+  final String? exclude;
+  final String? noneLabel;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_WhoSheet> createState() => _WhoSheetState();
+}
+
+class _WhoSheetState extends ConsumerState<_WhoSheet> {
+  late TeamSide? _side = widget.side ??
+      (widget.view.info.homeTeamId != null ? TeamSide.home : TeamSide.away);
+
+  @override
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final e = event;
-    final isGoal = e.type == EventTypes.goal;
-    if (e.isVoided ||
-        (!isGoal && e.type != EventTypes.card && e.type != EventTypes.shot)) {
-      return const SizedBox.shrink();
-    }
-    final teamId = switch (e.team) {
-      TeamSide.home => view.info.homeTeamId,
-      TeamSide.away => view.info.awayTeamId,
+    final info = widget.view.info;
+    final teamId = switch (_side) {
+      TeamSide.home => info.homeTeamId,
+      TeamSide.away => info.awayTeamId,
       null => null,
     };
-    if (teamId == null) return const SizedBox.shrink();
-    final players = (ref.watch(teamMembersProvider(teamId)).valueOrNull ??
-            const <TeamMember>[])
-        .where((m) =>
-            m.role == MemberRole.player || m.role == MemberRole.goalkeeper)
-        .toList()
-      ..sort((a, b) => (a.number ?? 999).compareTo(b.number ?? 999));
-    if (players.isEmpty) return const SizedBox.shrink();
-
-    final scorerId = e.metadata[MetaKeys.playerId] as String?;
-    final askAssist = isGoal && scorerId != null && !e.assistAnswered;
-    if (scorerId != null && !askAssist) return const SizedBox.shrink();
-
-    final question = scorerId == null
-        ? (isGoal ? l.whoScored : l.whichPlayer)
-        : l.whoAssisted;
-    final color = teamColor(e.team!);
-    final chips = <Widget>[
-      if (askAssist)
-        _chip(l.noAssist, PistakColors.textMuted,
-            () => onPick({MetaKeys.assistId: '', MetaKeys.assistName: null})),
-      for (final m in players)
-        if (m.id != scorerId)
-          _chip(m.label, color, () {
-            onPick(askAssist
-                ? {MetaKeys.assistId: m.id, MetaKeys.assistName: m.label}
-                : {MetaKeys.playerId: m.id, MetaKeys.playerName: m.label});
-          }),
-    ];
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Text(question,
-              style:
-                  const TextStyle(fontSize: 13, color: PistakColors.textMuted)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: SizedBox(
-              height: 48,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: chips,
+    final players = teamId == null
+        ? const <TeamMember>[]
+        : ((ref.watch(teamMembersProvider(teamId)).valueOrNull ??
+                const <TeamMember>[])
+            .where((m) =>
+                (m.role == MemberRole.player ||
+                    m.role == MemberRole.goalkeeper) &&
+                m.id != widget.exclude)
+            .toList()
+          ..sort((a, b) => (a.number ?? 999).compareTo(b.number ?? 999)));
+    final color = teamColor(_side);
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints:
+            BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 12),
+              if (widget.chooseSide) ...[
+                SegmentedButton<TeamSide>(
+                  segments: [
+                    ButtonSegment(
+                        value: TeamSide.home,
+                        label: Text(teamName(l, info, TeamSide.home),
+                            overflow: TextOverflow.ellipsis)),
+                    ButtonSegment(
+                        value: TeamSide.away,
+                        label: Text(teamName(l, info, TeamSide.away),
+                            overflow: TextOverflow.ellipsis)),
+                  ],
+                  selected: {_side ?? TeamSide.home},
+                  onSelectionChanged: (v) => setState(() => _side = v.first),
+                ),
+                const SizedBox(height: 12),
+              ],
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final m in players)
+                    SizedBox(
+                      height: 56,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: color,
+                          side: BorderSide(color: color, width: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                        ),
+                        onPressed: () => Navigator.pop(
+                            context, _Who(side: _side, player: m)),
+                        child: Text(m.label,
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w800)),
+                      ),
+                    ),
+                ],
               ),
-            ),
+              const SizedBox(height: 12),
+              Row(children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l.skip),
+                ),
+                const Spacer(),
+                if (widget.noneLabel != null)
+                  FilledButton.tonal(
+                    onPressed: () => Navigator.pop(context, _Who(side: _side)),
+                    child: Text(widget.noneLabel!),
+                  )
+                else if (widget.chooseSide)
+                  FilledButton.tonal(
+                    onPressed: () => Navigator.pop(context, _Who(side: _side)),
+                    child: Text(l.teamOnly),
+                  ),
+              ]),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
-
-  Widget _chip(String label, Color color, VoidCallback onTap) => Padding(
-        padding: const EdgeInsets.only(right: 6),
-        child: OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(48, 48),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            foregroundColor: color,
-            side: BorderSide(color: color),
-          ),
-          onPressed: onTap,
-          child:
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-        ),
-      );
 }
 
 class _MiniTeamButton extends StatelessWidget {

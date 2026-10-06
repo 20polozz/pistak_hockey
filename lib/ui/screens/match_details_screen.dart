@@ -9,6 +9,7 @@ import '../../domain/sport/sports.dart';
 import '../../l10n/app_localizations.dart';
 import '../../domain/team/team.dart';
 import '../providers.dart';
+import '../widgets/pickers.dart';
 import '../widgets/team_crest.dart';
 
 /// Complete or edit the match information at any moment (before, during or
@@ -48,6 +49,7 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
   String? _awayTeamId;
   late MatchFormat _format;
   bool _stopOnTimeout = true;
+  bool _stopOnEvents = true;
   bool _saving = false;
   bool _saved = false;
 
@@ -87,6 +89,7 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
     _timeoutSeconds.text = '${f.timeoutDuration.inSeconds}';
     _timeoutsPerPeriod.text = '${f.timeoutsPerTeamPerPeriod}';
     _stopOnTimeout = f.stopClockOnTimeout;
+    _stopOnEvents = f.stopClockOnEvents;
     _foulLimit.text = '${f.foulLimit ?? 0}';
     _otPeriods.text = '${f.overtimePeriods}';
     _shootout = f.allowShootout;
@@ -137,10 +140,33 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
                     children: [
                       _teamField(l, home: true),
                       _teamField(l, home: false),
-                      _field(_category, l.fieldCategory),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: CategoryDropdown(
+                          value: _category.text,
+                          onChanged: (v) => setState(() {
+                            _category.text = v ?? '';
+                            final f = ref
+                                .read(categoryCatalogProvider)
+                                .valueOrNull
+                                ?.byName(v);
+                            if (f != null &&
+                                _info?.status == MatchStatus.notStarted) {
+                              _setFormat(f);
+                            }
+                          }),
+                        ),
+                      ),
                       _field(_competition, l.fieldCompetition),
                       _field(_venue, l.fieldVenue),
-                      _field(_season, l.fieldSeason),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: SeasonDropdown(
+                          value: _season.text,
+                          onChanged: (v) =>
+                              setState(() => _season.text = v ?? ''),
+                        ),
+                      ),
                       _dateTile(l),
                       _field(_notes, l.fieldNotes, maxLines: 4),
                       const SizedBox(height: 8),
@@ -197,7 +223,10 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
                     } else {
                       _awayTeamId = t?.id;
                     }
-                    if (t != null) ctrl.text = t.name;
+                    if (t != null) {
+                      ctrl.text = t.name;
+                      _applyTeamDefaults(t);
+                    }
                   }),
                   itemBuilder: (_) => [
                     PopupMenuItem<String>(value: '', child: Text(l.unlinkTeam)),
@@ -208,6 +237,21 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
         ),
       ),
     );
+  }
+
+  /// Linking one of my teams fills the match's category (and its durations)
+  /// and season from the team, when they're still empty / not started.
+  void _applyTeamDefaults(Team t) {
+    final info = _info;
+    if (info == null) return;
+    if (_season.text.trim().isEmpty && (t.season?.trim().isNotEmpty ?? false)) {
+      _season.text = t.season!.trim();
+    }
+    final cat =
+        ref.read(categoryCatalogProvider).valueOrNull?.byName(t.category);
+    if (cat == null || _category.text.trim().isNotEmpty) return;
+    _category.text = cat.name;
+    if (info.status == MatchStatus.notStarted) _setFormat(cat);
   }
 
   Widget _field(TextEditingController c, String label, {int maxLines = 1}) =>
@@ -264,10 +308,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
   Widget _formatSection(AppLocalizations l, MatchInfo info) {
     final sport = Sports.byId(info.sport);
     final locked = info.status != MatchStatus.notStarted;
-    final options = [
-      ...sport.defaultFormats,
-      ...?ref.watch(categoriesProvider).valueOrNull,
-    ];
+    final options = ref.watch(categoryCatalogProvider).valueOrNull?.all ??
+        sport.defaultFormats;
     final presetIds = options.map((f) => f.id).toSet();
     final selected = presetIds.contains(_format.id) ? _format.id : _customId;
     final isCustom = selected == _customId;
@@ -287,6 +329,7 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
               ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
+              key: ValueKey('format:$selected:${options.length}'),
               initialValue: selected,
               isExpanded: true,
               decoration: InputDecoration(labelText: l.fieldFormat),
@@ -367,6 +410,14 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
               onChanged:
                   locked ? null : (v) => setState(() => _stopOnTimeout = v),
             ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l.formatStopOnEvents),
+              subtitle: Text(l.formatStopOnEventsHint),
+              value: _stopOnEvents,
+              onChanged:
+                  locked ? null : (v) => setState(() => _stopOnEvents = v),
+            ),
           ],
         ),
       ),
@@ -383,7 +434,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
 
   MatchFormat _resolvedFormat() {
     if (_format.id != _customId) {
-      return _format.copyWith(stopClockOnTimeout: _stopOnTimeout);
+      return _format.copyWith(
+          stopClockOnTimeout: _stopOnTimeout, stopClockOnEvents: _stopOnEvents);
     }
     int read(TextEditingController c, int fallback, int min) {
       final v = int.tryParse(c.text.trim());
@@ -406,6 +458,7 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
       timeoutDuration: Duration(seconds: toSecs),
       timeoutsPerTeamPerPeriod: toPer,
       stopClockOnTimeout: _stopOnTimeout,
+      stopClockOnEvents: _stopOnEvents,
       foulLimit: foulLimit == 0 ? null : foulLimit,
       clearFoulLimit: foulLimit == 0,
       overtimePeriods: otPeriods,

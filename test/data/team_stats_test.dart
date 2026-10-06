@@ -11,6 +11,11 @@ import 'package:pistak/domain/sport/roller_hockey.dart';
 import 'package:pistak/domain/stats/team_stats.dart';
 import 'package:pistak/ui/match_controller.dart';
 
+/// Continuous clock: these tests are about other things than the automatic
+/// stops of effective time (see test/domain/effective_time_test.dart).
+final continuousTime =
+    rollerHockey.defaultFormat.copyWith(stopClockOnEvents: false);
+
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -23,7 +28,7 @@ void main() {
         {required bool weAreHome, String season = '2026-27'}) async {
       final m = await repo.createMatch(
           sport: rollerHockey.id,
-          format: rollerHockey.defaultFormat,
+          format: continuousTime,
           homeTeamId: weAreHome ? 'vic' : null,
           awayTeamId: weAreHome ? null : 'vic',
           season: season);

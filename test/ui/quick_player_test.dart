@@ -27,7 +27,7 @@ void main() {
   });
   tearDownAll(() => db.close());
 
-  testWidgets('goal → tap scorer → tap assist, never blocking', (tester) async {
+  testWidgets('GOAL → clock stops → who scored? → assist', (tester) async {
     final teams = DriftTeamRepository(db);
     final team = await teams.createTeam(name: 'CP Vic');
     await teams.addMember(team.id,
@@ -47,7 +47,6 @@ void main() {
         repository: repo,
         clock: const SystemClock());
     await c.startMatch();
-    await c.goal(TeamSide.home);
 
     tester.view.physicalSize = const Size(412, 915);
     tester.view.devicePixelRatio = 1;
@@ -72,6 +71,8 @@ void main() {
     }
 
     await settle();
+    await tester.tap(find.text('GOAL HOME'));
+    await settle();
     expect(find.text('Who scored?'), findsOneWidget);
     expect(find.text('Laia'), findsNothing, reason: 'coaches are not offered');
     await tester.tap(find.text('#7 Marc'));
@@ -82,12 +83,69 @@ void main() {
     await tester.tap(find.text('#10 Pau'));
     await settle();
     expect(find.text('Assist?'), findsNothing);
+    expect((await c.currentState()).isClockRunning, isFalse,
+        reason: 'the goal stopped the clock');
 
     final goal = (await repo.getEvents(m.id))
         .firstWhere((e) => e.type == EventTypes.goal);
     expect(goal.playerName, '#7 Marc');
     expect(goal.assistName, '#10 Pau');
     expect(goal.revision, greaterThan(1));
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
+  testWidgets('blue card → team + player in one window', (tester) async {
+    final teams = DriftTeamRepository(db);
+    final team = await teams.createTeam(name: 'HC Vilassar');
+    await teams.addMember(team.id,
+        role: MemberRole.player, name: 'Jan', number: 4);
+    final repo = DriftMatchRepository(db, deviceId: 'd');
+    final m = await repo.createMatch(
+        sport: rollerHockey.id,
+        format: rollerHockey.defaultFormat,
+        homeName: 'HC Vilassar',
+        awayName: 'CP Rival',
+        homeTeamId: team.id);
+    await MatchController(
+            matchId: m.id,
+            deviceId: 'd',
+            repository: repo,
+            clock: const SystemClock())
+        .startMatch();
+    tester.view.physicalSize = const Size(412, 915);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        deviceIdProvider.overrideWithValue('d'),
+      ],
+      child: MaterialApp(
+        theme: buildPistakTheme(),
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: MatchScreen(matchId: m.id),
+      ),
+    ));
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    await settle();
+    await tester.tap(find.text('BLUE'));
+    await settle();
+    expect(find.text('Who got the card?'), findsOneWidget);
+    await tester.tap(find.text('#4 Jan'));
+    await settle();
+    final card = (await repo.getEvents(m.id))
+        .firstWhere((e) => e.type == EventTypes.card);
+    expect(card.team, TeamSide.home);
+    expect(card.playerName, '#4 Jan');
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));

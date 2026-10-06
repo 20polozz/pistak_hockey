@@ -109,6 +109,11 @@ class AppProcess {
   }
 }
 
+/// Continuous clock: these tests are about other things than the automatic
+/// stops of effective time (see test/domain/effective_time_test.dart).
+final continuousTime =
+    rollerHockey.defaultFormat.copyWith(stopClockOnEvents: false);
+
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -133,8 +138,8 @@ void main() {
     var app = AppProcess(file, clock, server);
     await app.boot();
     final deviceId = app.repo.deviceId;
-    final match = await app.repo.createMatch(
-        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final match = await app.repo
+        .createMatch(sport: rollerHockey.id, format: continuousTime);
     expect((await app.sync.syncOnce()).ok, isTrue);
     expect(server.matches.containsKey(match.id), isTrue);
 
@@ -216,8 +221,8 @@ void main() {
     final clock = FakeClock(DateTime.utc(2026, 10, 12, 18, 30));
     final app = AppProcess(file, clock, FakeServer());
     await app.boot();
-    final m = await app.repo.createMatch(
-        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final m = await app.repo
+        .createMatch(sport: rollerHockey.id, format: continuousTime);
     expect(m.status, MatchStatus.notStarted);
     expect(m.isUntitled, isTrue);
 
@@ -240,8 +245,8 @@ void main() {
     final clock = FakeClock(DateTime.utc(2026, 10, 12, 18, 30));
     final app = AppProcess(file, clock, FakeServer());
     await app.boot();
-    final m = await app.repo.createMatch(
-        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final m = await app.repo
+        .createMatch(sport: rollerHockey.id, format: continuousTime);
     final c = app.controller(m.id);
     await c.startMatch();
     clock.advance(const Duration(minutes: 1));
@@ -265,8 +270,8 @@ void main() {
     final server = FakeServer();
     final app = AppProcess(file, clock, server);
     await app.boot();
-    final m = await app.repo.createMatch(
-        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final m = await app.repo
+        .createMatch(sport: rollerHockey.id, format: continuousTime);
     final c = app.controller(m.id);
     final card = (await c.card(CardColors.red)).single;
 
@@ -290,8 +295,8 @@ void main() {
     final clock = FakeClock(DateTime.utc(2026, 10, 12, 18, 30));
     final app = AppProcess(file, clock, FakeServer());
     await app.boot();
-    final m = await app.repo.createMatch(
-        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final m = await app.repo
+        .createMatch(sport: rollerHockey.id, format: continuousTime);
     final goal = (await app.controller(m.id).goal(TeamSide.away)).single;
     await app.repo.appendEvents(m.id, [goal.copyWith(seq: 0)]);
     final events = await app.repo.getEvents(m.id);
@@ -305,8 +310,7 @@ void main() {
     final db = AppDatabase(NativeDatabase.memory());
     final repo = DriftMatchRepository(db,
         deviceId: 'd', clock: FakeClock(DateTime.utc(2026)));
-    await repo.createMatch(
-        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    await repo.createMatch(sport: rollerHockey.id, format: continuousTime);
     final engine = SyncEngine(
         repository: repo, api: server, auth: const GuestAuthService());
     final report = await engine.syncOnce();

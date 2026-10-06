@@ -19,6 +19,7 @@ class MatchFormat {
     this.overtimePeriods = 0,
     this.overtimeDuration = const Duration(minutes: 5),
     this.allowShootout = false,
+    this.stopClockOnEvents = false,
   }) : assert(periods >= 1);
 
   final String id;
@@ -45,6 +46,11 @@ class MatchFormat {
 
   /// Whether a penalty shoot-out can be played after the last period.
   final bool allowShootout;
+
+  /// Roller hockey "effective time": a goal, foul, card, penalty or direct
+  /// free hit stops the running clock (in the same action, so undo restores
+  /// it). Play restarts with RESUME.
+  final bool stopClockOnEvents;
 
   int get totalPeriods => periods + overtimePeriods;
   Duration get regulationDuration => periodDuration * periods;
@@ -77,6 +83,7 @@ class MatchFormat {
     int? overtimePeriods,
     Duration? overtimeDuration,
     bool? allowShootout,
+    bool? stopClockOnEvents,
   }) =>
       MatchFormat(
         id: id ?? this.id,
@@ -93,6 +100,7 @@ class MatchFormat {
         overtimePeriods: overtimePeriods ?? this.overtimePeriods,
         overtimeDuration: overtimeDuration ?? this.overtimeDuration,
         allowShootout: allowShootout ?? this.allowShootout,
+        stopClockOnEvents: stopClockOnEvents ?? this.stopClockOnEvents,
       );
 
   Map<String, dynamic> toJson() => {
@@ -109,6 +117,7 @@ class MatchFormat {
         'overtimePeriods': overtimePeriods,
         'overtimeDurationMs': overtimeDuration.inMilliseconds,
         'allowShootout': allowShootout,
+        'stopClockOnEvents': stopClockOnEvents,
       };
 
   /// Tolerant: formats saved by older versions lack the newer keys.
@@ -130,6 +139,7 @@ class MatchFormat {
       overtimePeriods: (j['overtimePeriods'] as num?)?.toInt() ?? 0,
       overtimeDuration: ms('overtimeDurationMs', 5 * 60000),
       allowShootout: j['allowShootout'] as bool? ?? false,
+      stopClockOnEvents: j['stopClockOnEvents'] as bool? ?? false,
     );
   }
 

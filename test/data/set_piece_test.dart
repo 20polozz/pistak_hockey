@@ -8,6 +8,11 @@ import 'package:pistak/domain/match/match_event.dart';
 import 'package:pistak/domain/sport/roller_hockey.dart';
 import 'package:pistak/ui/match_controller.dart';
 
+/// Continuous clock: these tests are about other things than the automatic
+/// stops of effective time (see test/domain/effective_time_test.dart).
+final continuousTime =
+    rollerHockey.defaultFormat.copyWith(stopClockOnEvents: false);
+
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -15,8 +20,8 @@ void main() {
     final db = AppDatabase(NativeDatabase.memory());
     final clock = FakeClock(DateTime.utc(2026, 10, 12, 18));
     final repo = DriftMatchRepository(db, deviceId: 'd', clock: clock);
-    final m = await repo.createMatch(
-        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final m =
+        await repo.createMatch(sport: rollerHockey.id, format: continuousTime);
     final c = MatchController(
         matchId: m.id, deviceId: 'd', repository: repo, clock: clock);
     await c.startMatch();

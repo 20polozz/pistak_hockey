@@ -62,6 +62,9 @@ abstract final class IncidentKinds {
 
 abstract final class PauseReasons {
   static const timeout = 'timeout';
+
+  /// Automatic stop after a goal / foul / card / set piece.
+  static const event = 'event';
 }
 
 abstract final class ResumeReasons {

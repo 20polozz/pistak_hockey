@@ -53,6 +53,11 @@ class Device {
   }
 }
 
+/// Continuous clock: these tests are about other things than the automatic
+/// stops of effective time (see test/domain/effective_time_test.dart).
+final continuousTime =
+    rollerHockey.defaultFormat.copyWith(stopClockOnEvents: false);
+
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   Process? server;
@@ -121,7 +126,7 @@ void main() {
     phone.baseUrl = 'http://127.0.0.1:9';
     final m = await phone.repo.createMatch(
         sport: rollerHockey.id,
-        format: rollerHockey.defaultFormat,
+        format: continuousTime,
         homeName: 'CP Exemple',
         awayName: 'HC Exemple');
     final c = MatchController(
@@ -206,8 +211,8 @@ void main() {
         role: MemberRole.player, name: 'Marc', number: 7);
     await teams.addMember(team.id, role: MemberRole.coach, name: 'Laia');
 
-    final m = await phone.repo.createMatch(
-        sport: rollerHockey.id, format: rollerHockey.defaultFormat);
+    final m = await phone.repo
+        .createMatch(sport: rollerHockey.id, format: continuousTime);
     final audio = DriftAudioRepository(phone.db, clock: phone.clock);
     final c = MatchController(
         matchId: m.id,

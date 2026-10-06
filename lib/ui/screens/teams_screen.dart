@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../domain/team/team.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers.dart';
+import '../widgets/pickers.dart';
 import '../widgets/team_crest.dart';
 
 String roleTitle(AppLocalizations l, MemberRole r) => switch (r) {
@@ -237,11 +238,26 @@ class _TeamDetailScreenState extends ConsumerState<TeamDetailScreen> {
                       const SizedBox(height: 16),
                       _field(_name, l.teamName),
                       _field(_short, l.teamShortName),
-                      Row(children: [
-                        Expanded(child: _field(_category, l.fieldCategory)),
-                        const SizedBox(width: 8),
-                        Expanded(child: _field(_season, l.fieldSeason)),
-                      ]),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: CategoryDropdown(
+                          value: _category.text,
+                          onChanged: (v) {
+                            _category.text = v ?? '';
+                            _save();
+                          },
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: SeasonDropdown(
+                          value: _season.text,
+                          onChanged: (v) {
+                            _season.text = v ?? '';
+                            _save();
+                          },
+                        ),
+                      ),
                       ...members.when<List<Widget>>(
                         loading: () => [const LinearProgressIndicator()],
                         error: (e, _) => [Text('$e')],

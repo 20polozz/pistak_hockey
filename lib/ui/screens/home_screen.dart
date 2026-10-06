@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../core/time_format.dart';
 import '../../domain/match/match_filter.dart';
 import '../../domain/match/match_info.dart';
+import '../../domain/sport/match_format.dart';
 import '../../domain/sport/sports.dart';
 import '../../domain/team/team.dart';
 import '../../l10n/app_localizations.dart';
@@ -189,12 +190,21 @@ class HomeScreen extends ConsumerWidget {
       Navigator.of(context)
           .push(MaterialPageRoute<void>(builder: (_) => screen));
 
+  /// Last used category, in its CURRENT version (edited durations / rules
+  /// apply to new matches; old saved copies are refreshed by id).
+  Future<MatchFormat> _currentFormat(WidgetRef ref) async {
+    final last = await ref.read(settingsRepositoryProvider).lastFormat();
+    final catalog = await ref.read(categoryCatalogProvider.future);
+    return (last == null ? null : catalog.byId(last.id)) ??
+        last ??
+        Sports.defaultSport.defaultFormat;
+  }
+
   /// NEW MATCH: creates an untitled match instantly (no form to fill) and
   /// opens the recording screen. Details can be completed later.
   Future<void> _newMatch(BuildContext context, WidgetRef ref) async {
     final sport = Sports.defaultSport;
-    final format = await ref.read(settingsRepositoryProvider).lastFormat() ??
-        sport.defaultFormat;
+    final format = await _currentFormat(ref);
     final match = await ref
         .read(matchRepositoryProvider)
         .createMatch(sport: sport.id, format: format);
@@ -205,8 +215,7 @@ class HomeScreen extends ConsumerWidget {
   /// Schedule: a not-started match with a date, completed in the details form.
   Future<void> _schedule(BuildContext context, WidgetRef ref) async {
     final sport = Sports.defaultSport;
-    final format = await ref.read(settingsRepositoryProvider).lastFormat() ??
-        sport.defaultFormat;
+    final format = await _currentFormat(ref);
     final now = DateTime.now();
     final when = DateTime(now.year, now.month, now.day + 1, 18);
     final match = await ref.read(matchRepositoryProvider).createMatch(

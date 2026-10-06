@@ -12,7 +12,8 @@ import 'package:pistak/domain/sport/roller_hockey.dart';
 /// In-memory match simulator: commands → events → projected state.
 class Sim {
   Sim({MatchFormat? format})
-      : format = format ?? rollerHockey.defaultFormat,
+      : format = format ??
+            rollerHockey.defaultFormat.copyWith(stopClockOnEvents: false),
         clock = FakeClock(DateTime.utc(2026, 10, 12, 16, 30)) {
     ef = EventFactory(
       matchId: 'm1',

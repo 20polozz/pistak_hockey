@@ -14,6 +14,11 @@ import 'package:pistak/domain/sport/roller_hockey.dart';
 import 'package:pistak/domain/team/team.dart';
 import 'package:pistak/ui/match_controller.dart';
 
+/// Continuous clock: these tests are about other things than the automatic
+/// stops of effective time (see test/domain/effective_time_test.dart).
+final continuousTime =
+    rollerHockey.defaultFormat.copyWith(stopClockOnEvents: false);
+
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -59,7 +64,7 @@ void main() {
         role: MemberRole.player, name: 'Joan', number: 8);
     final m = await matches.createMatch(
         sport: rollerHockey.id,
-        format: rollerHockey.defaultFormat,
+        format: continuousTime,
         homeName: home.name,
         homeTeamId: home.id,
         awayName: 'HC Rival');
@@ -89,7 +94,7 @@ void main() {
         clock.set(at);
         final m = await matches.createMatch(
             sport: rollerHockey.id,
-            format: rollerHockey.defaultFormat,
+            format: continuousTime,
             homeName: home,
             awayName: away,
             homeTeamId: home == mine.name ? mine.id : null,
@@ -142,17 +147,17 @@ void main() {
     clock.set(DateTime.utc(2026, 10, 10, 9));
     await matches.createMatch(
         sport: rollerHockey.id,
-        format: rollerHockey.defaultFormat,
+        format: continuousTime,
         homeName: 'Later',
         scheduledAt: DateTime.utc(2026, 10, 20, 16));
     await matches.createMatch(
         sport: rollerHockey.id,
-        format: rollerHockey.defaultFormat,
+        format: continuousTime,
         homeName: 'Soon',
         scheduledAt: DateTime.utc(2026, 10, 12, 16));
     await matches.createMatch(
         sport: rollerHockey.id,
-        format: rollerHockey.defaultFormat,
+        format: continuousTime,
         homeName: 'Past',
         scheduledAt: DateTime.utc(2026, 10, 1, 16));
     final all = await matches.watchMatches().first;
@@ -165,9 +170,7 @@ void main() {
     var d = AppDatabase(NativeDatabase(file));
     final repo = DriftMatchRepository(d, deviceId: 'd', clock: clock);
     final m = await repo.createMatch(
-        sport: rollerHockey.id,
-        format: rollerHockey.defaultFormat,
-        homeName: 'Abans');
+        sport: rollerHockey.id, format: continuousTime, homeName: 'Abans');
     // Turn the file back into a v2 database.
     await d.customStatement('DROP TABLE teams');
     await d.customStatement('DROP TABLE team_members');

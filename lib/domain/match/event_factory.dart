@@ -152,29 +152,45 @@ class EventFactory {
 
   // ------------------------------------------------------------ recording
 
-  List<MatchEvent> goal(MatchState s, TeamSide team) =>
-      [_Action(this, clock.now()).eventAt(s, EventTypes.goal, team: team)];
+  /// Adds the automatic clock stop of "effective time" formats to an action.
+  List<MatchEvent> _stopsClock(
+      _Action a, MatchState s, List<MatchEvent> events) {
+    if (s.phase == MatchPhase.running && s.format.stopClockOnEvents) {
+      events.add(
+          a.eventAt(s, EventTypes.clockPause, subtype: PauseReasons.event));
+    }
+    return events;
+  }
+
+  List<MatchEvent> goal(MatchState s, TeamSide team) {
+    final a = _Action(this, clock.now());
+    return _stopsClock(a, s, [a.eventAt(s, EventTypes.goal, team: team)]);
+  }
 
   /// In-game penalty / direct free hit: a goal (counts in the score) or a
   /// missed shot. [kind] = ShotKinds.penalty | ShotKinds.freeHit.
   List<MatchEvent> setPiece(MatchState s, TeamSide team,
-          {required String kind, required bool scored}) =>
-      [
-        _Action(this, clock.now()).eventAt(
-            s, scored ? EventTypes.goal : EventTypes.shot,
-            subtype: scored ? null : ShootoutResults.missed,
-            team: team,
-            metadata: {MetaKeys.shotKind: kind})
-      ];
+      {required String kind, required bool scored}) {
+    final a = _Action(this, clock.now());
+    return _stopsClock(a, s, [
+      a.eventAt(s, scored ? EventTypes.goal : EventTypes.shot,
+          subtype: scored ? null : ShootoutResults.missed,
+          team: team,
+          metadata: {MetaKeys.shotKind: kind})
+    ]);
+  }
 
-  List<MatchEvent> foul(MatchState s, TeamSide team) =>
-      [_Action(this, clock.now()).eventAt(s, EventTypes.foul, team: team)];
+  List<MatchEvent> foul(MatchState s, TeamSide team) {
+    final a = _Action(this, clock.now());
+    return _stopsClock(a, s, [a.eventAt(s, EventTypes.foul, team: team)]);
+  }
 
   /// Card with optional team (one-tap registration; team can be set later).
-  List<MatchEvent> card(MatchState s, String color, {TeamSide? team}) => [
-        _Action(this, clock.now())
-            .eventAt(s, EventTypes.card, subtype: color, team: team),
-      ];
+  List<MatchEvent> card(MatchState s, String color, {TeamSide? team}) {
+    final a = _Action(this, clock.now());
+    return _stopsClock(
+        a, s, [a.eventAt(s, EventTypes.card, subtype: color, team: team)]);
+  }
 
   /// Timeout. Pauses the clock too if the format says so and it runs.
   List<MatchEvent> timeout(MatchState s, TeamSide team) {

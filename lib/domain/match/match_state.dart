@@ -114,7 +114,7 @@ class MatchState {
   DateTime? breakStartedAt;
   ActiveTimeout? activeTimeout;
 
-  /// Last non-voided event (any type) and its action, for the undo bar.
+  /// Main (first) event of the last non-voided action, for the undo bar.
   MatchEvent? lastEvent;
 
   /// Invalid transitions ignored while projecting (diagnostics).

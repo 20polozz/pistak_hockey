@@ -16,7 +16,9 @@ class CategoriesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final custom = ref.watch(categoriesProvider);
+    final catalog = ref.watch(categoryCatalogProvider);
+    final settings = ref.read(settingsRepositoryProvider);
+    Future<void> refresh() async => ref.invalidate(categoriesProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l.categories)),
       floatingActionButton: FloatingActionButton.extended(
@@ -27,48 +29,48 @@ class CategoriesScreen extends ConsumerWidget {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            children: [
-              Text(l.categoriesHint,
-                  style: const TextStyle(color: PistakColors.textMuted)),
-              const SizedBox(height: 16),
-              ...custom.when<List<Widget>>(
-                loading: () => [const LinearProgressIndicator()],
-                error: (e, _) => [Text('$e')],
-                data: (list) => list.isEmpty
-                    ? [Text(l.noCategories)]
-                    : [
-                        for (final f in list)
-                          Card(
-                            child: ListTile(
-                              title: Text(f.name),
-                              subtitle: Text(_describe(l, f)),
-                              onTap: () => _edit(context, ref, f),
-                              trailing: IconButton(
-                                tooltip: l.deleteAction,
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () async {
-                                  await ref
-                                      .read(settingsRepositoryProvider)
-                                      .deleteCategory(f.id);
-                                  ref.invalidate(categoriesProvider);
-                                },
-                              ),
-                            ),
-                          ),
-                      ],
-              ),
-              const SizedBox(height: 24),
-              Text(l.builtInFormats,
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              for (final f in Sports.defaultSport.defaultFormats)
-                ListTile(
-                  title: Text(f.name),
-                  subtitle: Text(_describe(l, f)),
-                ),
-            ],
+          child: catalog.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('$e')),
+            data: (c) => ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              children: [
+                Text(l.categoriesHint,
+                    style: const TextStyle(color: PistakColors.textMuted)),
+                const SizedBox(height: 12),
+                for (final f in c.all)
+                  Card(
+                    child: ListTile(
+                      title: Text(f.name),
+                      subtitle: Text([
+                        _describe(l, f),
+                        if (c.isModified(f.id)) l.categoryModified,
+                        if (!c.isBuiltIn(f.id)) l.categoryCustom,
+                      ].join('\n')),
+                      onTap: () => _edit(context, ref, f),
+                      trailing: c.isModified(f.id)
+                          ? IconButton(
+                              tooltip: l.categoryRestore,
+                              icon: const Icon(Icons.restore),
+                              onPressed: () async {
+                                await settings.deleteCategory(f.id);
+                                await refresh();
+                              },
+                            )
+                          : !c.isBuiltIn(f.id)
+                              ? IconButton(
+                                  tooltip: l.deleteAction,
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () async {
+                                    await settings.deleteCategory(f.id);
+                                    await refresh();
+                                  },
+                                )
+                              : const Icon(Icons.edit_outlined),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -122,6 +124,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       TextEditingController(text: '${base.overtimeDuration.inMinutes}');
   late bool _stop = base.stopClockOnTimeout;
   late bool _shootout = base.allowShootout;
+  late bool _stopOnEvents = base.stopClockOnEvents;
   String? _error;
 
   @override
@@ -153,6 +156,13 @@ class _CategoryDialogState extends State<_CategoryDialog> {
             num(_periods, l.formatPeriods),
             num(_minutes, l.formatPeriodMinutes),
             num(_break, l.formatBreakMinutes),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l.formatStopOnEvents),
+              subtitle: Text(l.formatStopOnEventsHint),
+              value: _stopOnEvents,
+              onChanged: (v) => setState(() => _stopOnEvents = v),
+            ),
             num(_toSecs, l.formatTimeoutSeconds),
             num(_toPer, l.formatTimeoutsPerPeriod),
             SwitchListTile(
@@ -217,6 +227,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         overtimeDuration: Duration(
             minutes: read(_otMinutes, base.overtimeDuration.inMinutes, 1)),
         allowShootout: _shootout,
+        stopClockOnEvents: _stopOnEvents,
       ),
     );
   }

@@ -25,7 +25,9 @@ import '../domain/repositories/match_repository.dart';
 import '../domain/repositories/team_repository.dart';
 import '../domain/match/match_filter.dart';
 import '../domain/team/team.dart';
+import '../domain/sport/category_catalog.dart';
 import '../domain/sport/match_format.dart';
+import '../domain/sport/sports.dart';
 import '../services/audio/audio_playback_service.dart';
 import '../services/transcription/http_transcription_service.dart';
 import '../services/transcription/transcription_queue.dart';
@@ -89,6 +91,11 @@ final matchAudioProvider = StreamProvider.family<List<AudioRecording>, String>(
 /// User-defined categories (named formats). Invalidate after edits.
 final categoriesProvider = FutureProvider<List<MatchFormat>>(
     (ref) => ref.watch(settingsRepositoryProvider).categories());
+
+/// Built-in categories (with the user's edits) + custom ones.
+final categoryCatalogProvider = FutureProvider<CategoryCatalog>((ref) async =>
+    CategoryCatalog(Sports.defaultSport.defaultFormats,
+        await ref.watch(categoriesProvider.future)));
 
 final teamRepositoryProvider = Provider<TeamRepository>((ref) =>
     DriftTeamRepository(ref.watch(databaseProvider),
