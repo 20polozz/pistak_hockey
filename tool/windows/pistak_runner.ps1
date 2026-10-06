@@ -46,6 +46,10 @@ $actions = @{
   'launchapp' = 'adb -s'
   'installsplit' = 'adb -s'
   'killemu'   = 'taskkill /F /IM qemu-system-x86_64.exe /T'
+  # GitHub (fixed repository; Git Credential Manager asks the user to sign in once).
+  'gitsetup'  = 'git remote remove origin 2>nul & git remote add origin https://github.com/20polozz/pistak.git && git remote -v'
+  # Code backup (main) + compiled web (web branch, deployed by Cloudflare Pages).
+  'gitpush'   = 'git push -u origin main web'
   'backendget'  = 'cd backend && dart pub get'
   'backendtest' = 'cd backend && dart test'
   'backendanalyze' = 'cd backend && dart analyze'
