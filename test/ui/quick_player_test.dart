@@ -233,4 +233,72 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   }, timeout: const Timeout(Duration(seconds: 60)));
+
+  testWidgets(
+      'saves: only goalkeepers are offered; stopped clock resumes '
+      'with one tap on it', (tester) async {
+    final teams = DriftTeamRepository(db);
+    final team = await teams.createTeam(name: 'CP Porters');
+    await teams.addMember(team.id,
+        role: MemberRole.player, name: 'Marc', number: 7);
+    await teams.addMember(team.id,
+        role: MemberRole.goalkeeper, name: 'Gerard', number: 1);
+    final repo = DriftMatchRepository(db, deviceId: 'd');
+    final m = await repo.createMatch(
+        sport: rollerHockey.id,
+        format: rollerHockey.defaultFormat,
+        homeName: 'CP Porters',
+        homeTeamId: team.id);
+    final c = MatchController(
+        matchId: m.id,
+        deviceId: 'd',
+        repository: repo,
+        clock: const SystemClock());
+    await c.startMatch();
+
+    tester.view.physicalSize = const Size(412, 915);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        deviceIdProvider.overrideWithValue('d'),
+      ],
+      child: MaterialApp(
+        theme: buildPistakTheme(),
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: MatchScreen(matchId: m.id),
+      ),
+    ));
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    await settle();
+    await tester.tap(find.text('SAVE HOME'));
+    await settle();
+    expect(find.text('Which goalkeeper?'), findsOneWidget);
+    expect(find.text('#1 Gerard'), findsOneWidget);
+    expect(find.text('#7 Marc'), findsNothing, reason: 'not a goalkeeper');
+    await tester.tap(find.text('#1 Gerard'));
+    await settle();
+    final save = (await repo.getEvents(m.id))
+        .firstWhere((e) => e.type == EventTypes.save);
+    expect(save.playerName, '#1 Gerard');
+
+    // A foul stops the clock; tapping the clock restarts it.
+    await tester.tap(find.text('FOUL AWAY'));
+    await settle();
+    expect((await c.currentState()).isClockRunning, isFalse);
+    await tester.tap(find.byIcon(Icons.pause_circle_filled));
+    await settle();
+    expect((await c.currentState()).isClockRunning, isTrue);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  }, timeout: const Timeout(Duration(seconds: 60)));
 }

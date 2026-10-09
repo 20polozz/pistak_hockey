@@ -7,6 +7,7 @@ import 'package:pistak/app/theme.dart';
 import 'package:pistak/core/clock.dart';
 import 'package:pistak/data/db/app_database.dart';
 import 'package:pistak/data/repositories/drift_match_repository.dart';
+import 'package:pistak/domain/match/match_event.dart';
 import 'package:pistak/domain/sport/roller_hockey.dart';
 import 'package:pistak/l10n/app_localizations.dart';
 import 'package:pistak/ui/match_controller.dart';
@@ -66,6 +67,10 @@ void main() {
       // Yellow card without team: team buttons appear inside the bar.
       await tester.tap(find.byTooltip('YELLOW'));
       await settle();
+      // No team of mine: "who got the card?" with two team buttons.
+      expect(find.text('Who got the card?'), findsOneWidget);
+      await tester.tap(find.text('Skip'));
+      await settle();
       expect(goal(), g0);
       expect(foul(), f0);
 
@@ -74,6 +79,14 @@ void main() {
       await settle();
       await tester.tap(find.text('HOME').last);
       await settle();
+      expect(find.text('Who got the card?'), findsNothing);
+      final s = await MatchController(
+              matchId: m.id,
+              deviceId: 'd',
+              repository: repo,
+              clock: const SystemClock())
+          .currentState();
+      expect(s.tally(TeamSide.home).cards[CardColors.blue], 1);
       expect(goal(), g0);
       expect(foul(), f0);
       expect(tester.takeException(), isNull);

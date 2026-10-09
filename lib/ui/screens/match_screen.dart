@@ -75,7 +75,31 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
       if (info.awayTeamId != null) TeamSide.away,
     };
     final isCard = e.type == EventTypes.card;
+    final l = AppLocalizations.of(context);
+    // Card with no team of mine: just "which team?" with two big buttons.
+    if (isCard && e.team == null && linked.isEmpty) {
+      final side = await showModalBottomSheet<TeamSide>(
+        context: context,
+        showDragHandle: true,
+        builder: (ctx) => _CardTeamSheet(view: view, color: e.subtype),
+      );
+      if (side != null && mounted) await _run((c) => c.setTeam(e, side));
+      return;
+    }
     if (linked.isEmpty || (!isCard && !linked.contains(e.team))) return;
+    // Saves: only goalkeepers (a field player can't make a save).
+    final roles = e.type == EventTypes.save
+        ? const {MemberRole.goalkeeper}
+        : const {MemberRole.player, MemberRole.goalkeeper};
+    if (e.type == EventTypes.save) {
+      final teamId =
+          e.team == TeamSide.home ? info.homeTeamId : info.awayTeamId;
+      final members = teamId == null
+          ? const <TeamMember>[]
+          : await ref.read(teamMembersProvider(teamId).future);
+      if (!members.any((m) => m.role == MemberRole.goalkeeper)) return;
+      if (!mounted) return;
+    }
     if (!isCard &&
         !const {
           EventTypes.goal,
@@ -85,7 +109,6 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         }.contains(e.type)) {
       return;
     }
-    final l = AppLocalizations.of(context);
     final title = switch (e.type) {
       EventTypes.goal => e.shotKind != null ? l.whoShot : l.whoScored,
       EventTypes.save => l.whoSaved,
@@ -102,6 +125,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         title: title,
         side: e.team,
         chooseSide: isCard && e.team == null,
+        roles: roles,
+        cardColor: isCard ? e.subtype : null,
       ),
     );
     if (who == null || !mounted) return;
@@ -230,7 +255,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                       width: 380,
                       child: Column(
                         children: [
-                          _Scoreboard(view: v),
+                          _Scoreboard(
+                              view: v, onResume: () => _run((c) => c.resume())),
                           banner,
                           const Spacer(),
                           _controls(l, v),
@@ -252,7 +278,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                   child: Column(
                     children: [
-                      _Scoreboard(view: v),
+                      _Scoreboard(
+                          view: v, onResume: () => _run((c) => c.resume())),
                       banner,
                       const SizedBox(height: 8),
                       Expanded(child: _grid(l, v)),
@@ -536,11 +563,18 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           Expanded(flex: 2, child: secondary(endLabel, confirmEnd)),
         ]);
       case MatchPhase.paused:
+        // Stopped clock (goal, foul, card…): RESUME must be impossible to
+        // miss. It pulses and is wider; the clock itself also resumes.
         return Row(children: [
           Expanded(
-              flex: 3,
-              child: primary(l.resumeMatch, Icons.play_arrow,
-                  () => _run((c) => c.resume()))),
+              flex: 4,
+              child: PulsingGlow(
+                color: PistakColors.accent,
+                // While a timeout runs, its own panel has the RESUME button.
+                active: s.activeTimeout == null,
+                child: primary(l.resumeMatch, Icons.play_arrow,
+                    () => _run((c) => c.resume(), heavy: true)),
+              )),
           const SizedBox(width: 8),
           Expanded(flex: 2, child: secondary(endLabel, confirmEnd)),
         ]);
@@ -1018,8 +1052,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 // ---------------------------------------------------------------- widgets
 
 class _Scoreboard extends StatelessWidget {
-  const _Scoreboard({required this.view});
+  const _Scoreboard({required this.view, this.onResume});
   final MatchView view;
+
+  /// Tapping the stopped clock restarts it (one tap, big target).
+  final VoidCallback? onResume;
 
   @override
   Widget build(BuildContext context) {
@@ -1046,45 +1083,51 @@ class _Scoreboard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          TickerBuilder(builder: (context, now) {
-            final over = s.isOvertimeAt(now);
-            // Huge clock: shrinks to fit narrow screens / large system text.
-            return FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // The pause icon's slot is always there (invisible while
-                  // running) and mirrored on the right: pausing never
-                  // rescales the clock nor moves the rest of the screen.
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Opacity(
-                      opacity: s.phase == MatchPhase.paused ? 1 : 0,
-                      child: const Icon(Icons.pause_circle_filled,
-                          color: PistakColors.warning, size: 32),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: s.phase == MatchPhase.paused && s.activeTimeout == null
+                ? onResume
+                : null,
+            child: TickerBuilder(builder: (context, now) {
+              final over = s.isOvertimeAt(now);
+              // Huge clock: shrinks to fit narrow screens / large system text.
+              return FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // The pause icon's slot is always there (invisible while
+                    // running) and mirrored on the right: pausing never
+                    // rescales the clock nor moves the rest of the screen.
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Opacity(
+                        opacity: s.phase == MatchPhase.paused ? 1 : 0,
+                        child: const Icon(Icons.pause_circle_filled,
+                            color: PistakColors.warning, size: 32),
+                      ),
                     ),
-                  ),
-                  Text(
-                    formatMatchTime(s.matchTimeAt(now)),
-                    semanticsLabel: formatMatchTime(s.matchTimeAt(now)),
-                    style: TextStyle(
-                      fontSize: 64,
-                      height: 1.0,
-                      fontWeight: FontWeight.w900,
-                      fontFeatures: tabularFigures,
-                      color: over
-                          ? PistakColors.warning
-                          : s.isClockRunning
-                              ? Colors.white
-                              : PistakColors.textMuted,
+                    Text(
+                      formatMatchTime(s.matchTimeAt(now)),
+                      semanticsLabel: formatMatchTime(s.matchTimeAt(now)),
+                      style: TextStyle(
+                        fontSize: 64,
+                        height: 1.0,
+                        fontWeight: FontWeight.w900,
+                        fontFeatures: tabularFigures,
+                        color: over
+                            ? PistakColors.warning
+                            : s.isClockRunning
+                                ? Colors.white
+                                : PistakColors.textMuted,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 40),
-                ],
-              ),
-            );
-          }),
+                    const SizedBox(width: 40),
+                  ],
+                ),
+              );
+            }),
+          ),
           const SizedBox(height: 2),
           Text(phaseText,
               style: const TextStyle(
@@ -1177,9 +1220,9 @@ class _TeamScore extends StatelessWidget {
                           border: Border.all(color: PistakColors.blueCard),
                         ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.timer_outlined,
-                              size: 12, color: PistakColors.blueCard),
-                          const SizedBox(width: 3),
+                          const MiniCard(
+                              color: PistakColors.blueCard, height: 12),
+                          const SizedBox(width: 4),
                           Text(formatMatchTime(left),
                               style: const TextStyle(
                                   fontSize: 12,
@@ -1550,9 +1593,13 @@ class _WhoSheet extends ConsumerStatefulWidget {
     this.chooseSide = false,
     this.exclude,
     this.noneLabel,
+    this.roles = const {MemberRole.player, MemberRole.goalkeeper},
+    this.cardColor,
   });
   final MatchView view;
   final String title;
+  final Set<MemberRole> roles;
+  final String? cardColor;
   final TeamSide? side;
   final bool chooseSide;
   final String? exclude;
@@ -1579,10 +1626,8 @@ class _WhoSheetState extends ConsumerState<_WhoSheet> {
         ? const <TeamMember>[]
         : ((ref.watch(teamMembersProvider(teamId)).valueOrNull ??
                 const <TeamMember>[])
-            .where((m) =>
-                (m.role == MemberRole.player ||
-                    m.role == MemberRole.goalkeeper) &&
-                m.id != widget.exclude)
+            .where(
+                (m) => widget.roles.contains(m.role) && m.id != widget.exclude)
             .toList()
           ..sort((a, b) => (a.number ?? 999).compareTo(b.number ?? 999)));
     final color = teamColor(_side);
@@ -1595,7 +1640,16 @@ class _WhoSheetState extends ConsumerState<_WhoSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
+              Row(children: [
+                if (widget.cardColor != null) ...[
+                  MiniCard(color: cardColor(widget.cardColor)),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Text(widget.title,
+                      style: Theme.of(context).textTheme.titleLarge),
+                ),
+              ]),
               const SizedBox(height: 12),
               if (widget.chooseSide) ...[
                 SegmentedButton<TeamSide>(
@@ -1656,6 +1710,62 @@ class _WhoSheetState extends ConsumerState<_WhoSheet> {
               ]),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Whose card?" when no team of mine is linked: two big team buttons.
+class _CardTeamSheet extends StatelessWidget {
+  const _CardTeamSheet({required this.view, required this.color});
+  final MatchView view;
+  final String? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    Widget team(TeamSide side) => Expanded(
+          child: EventButton(
+            label: teamName(l, view.info, side).toUpperCase(),
+            color: teamColor(side),
+            filled: true,
+            onTap: () => Navigator.pop(context, side),
+          ),
+        );
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              MiniCard(color: cardColor(color)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(l.whoCard,
+                    style: Theme.of(context).textTheme.titleLarge),
+              ),
+            ]),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 72,
+              child: Row(children: [
+                team(TeamSide.home),
+                const SizedBox(width: 8),
+                team(TeamSide.away),
+              ]),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l.skip),
+              ),
+            ),
+          ],
         ),
       ),
     );

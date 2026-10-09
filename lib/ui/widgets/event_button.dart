@@ -177,3 +177,96 @@ class CardButton extends StatelessWidget {
     );
   }
 }
+
+/// Small card shape (2:3) in a card colour, for titles and chips.
+class MiniCard extends StatelessWidget {
+  const MiniCard({super.key, required this.color, this.height = 22});
+  final Color color;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: height * 0.7,
+        height: height,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(height * 0.12),
+        ),
+      );
+}
+
+/// Soft pulsing glow around [child] (e.g. RESUME while the clock is
+/// stopped) so it can't go unnoticed. No animation when not [active].
+class PulsingGlow extends StatefulWidget {
+  const PulsingGlow(
+      {super.key,
+      required this.child,
+      required this.color,
+      this.active = true});
+  final Widget child;
+  final Color color;
+  final bool active;
+
+  @override
+  State<PulsingGlow> createState() => _PulsingGlowState();
+}
+
+class _PulsingGlowState extends State<PulsingGlow>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 900));
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(PulsingGlow old) {
+    super.didUpdateWidget(old);
+    _sync();
+  }
+
+  void _sync() {
+    final reduce = WidgetsBinding
+        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+    if (widget.active && !reduce) {
+      if (!_c.isAnimating) _c.repeat(reverse: true);
+    } else {
+      _c.stop();
+      _c.value = widget.active ? 1 : 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.active) return widget.child;
+    return AnimatedBuilder(
+      animation: _c,
+      child: widget.child,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_c.value);
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: 0.25 + 0.45 * t),
+                blurRadius: 6 + 16 * t,
+                spreadRadius: 1 + 3 * t,
+              ),
+            ],
+          ),
+          child: child,
+        );
+      },
+    );
+  }
+}
