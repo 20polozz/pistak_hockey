@@ -85,10 +85,27 @@ void main() {
       sim.run((f, s) => f.foul(s, TeamSide.home));
       expect(sim.state.foulLimitReached(TeamSide.home), isTrue);
       expect(sim.state.foulLimitReached(TeamSide.away), isFalse);
-      // New period: counter starts again.
+      // New period: hockey fouls keep adding up (next free hit at 15).
       sim.waitMs(10);
       sim.run((f, s) => f.endPeriod(s));
       sim.run((f, s) => f.startNextPeriod(s));
+      expect(sim.state.foulCount(TeamSide.home), 10);
+      sim.run((f, s) => f.foul(s, TeamSide.home));
+      expect(sim.state.foulLimitReached(TeamSide.home), isFalse);
+      expect(sim.state.foulTarget(TeamSide.home), 15);
+    });
+
+    test('formats that reset fouls each period start again from 0', () {
+      final sim = Sim(format: short.copyWith(foulsResetEachPeriod: true));
+      sim.run((f, s) => f.startMatch(s));
+      for (var i = 0; i < 10; i++) {
+        sim.run((f, s) => f.foul(s, TeamSide.home));
+      }
+      expect(sim.state.foulLimitReached(TeamSide.home), isTrue);
+      sim.waitMs(10);
+      sim.run((f, s) => f.endPeriod(s));
+      sim.run((f, s) => f.startNextPeriod(s));
+      expect(sim.state.foulCount(TeamSide.home), 0);
       expect(sim.state.foulLimitReached(TeamSide.home), isFalse);
     });
 

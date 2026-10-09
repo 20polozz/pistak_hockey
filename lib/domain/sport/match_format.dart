@@ -18,6 +18,7 @@ class MatchFormat {
     this.exclusionDuration = const Duration(minutes: 2),
     this.foulLimit,
     this.foulLimitEvery = 5,
+    this.foulsResetEachPeriod = false,
     this.overtimePeriods = 0,
     this.overtimeDuration = const Duration(minutes: 5),
     this.allowShootout = false,
@@ -49,6 +50,10 @@ class MatchFormat {
   /// After [foulLimit], a new sanction every N more fouls (10, 15, 20…).
   /// 0 = only at the limit.
   final int foulLimitEvery;
+
+  /// Team fouls start again from 0 each period. Roller hockey: false (they
+  /// add up over the whole match: 10, then 15, 20…).
+  final bool foulsResetEachPeriod;
 
   /// Extra periods available if the match must have a winner (0 = none).
   final int overtimePeriods;
@@ -122,6 +127,7 @@ class MatchFormat {
     int? foulLimit,
     bool clearFoulLimit = false,
     int? foulLimitEvery,
+    bool? foulsResetEachPeriod,
     int? overtimePeriods,
     Duration? overtimeDuration,
     bool? allowShootout,
@@ -143,6 +149,7 @@ class MatchFormat {
         exclusionDuration: exclusionDuration ?? this.exclusionDuration,
         foulLimit: clearFoulLimit ? null : (foulLimit ?? this.foulLimit),
         foulLimitEvery: foulLimitEvery ?? this.foulLimitEvery,
+        foulsResetEachPeriod: foulsResetEachPeriod ?? this.foulsResetEachPeriod,
         overtimePeriods: overtimePeriods ?? this.overtimePeriods,
         overtimeDuration: overtimeDuration ?? this.overtimeDuration,
         allowShootout: allowShootout ?? this.allowShootout,
@@ -162,6 +169,7 @@ class MatchFormat {
         'exclusionDurationMs': exclusionDuration.inMilliseconds,
         'foulLimit': foulLimit,
         'foulLimitEvery': foulLimitEvery,
+        'foulsResetEachPeriod': foulsResetEachPeriod,
         'overtimePeriods': overtimePeriods,
         'overtimeDurationMs': overtimeDuration.inMilliseconds,
         'allowShootout': allowShootout,
@@ -189,6 +197,7 @@ class MatchFormat {
       exclusionDuration: ms('exclusionDurationMs', 120000),
       foulLimit: (j['foulLimit'] as num?)?.toInt(),
       foulLimitEvery: (j['foulLimitEvery'] as num?)?.toInt() ?? 5,
+      foulsResetEachPeriod: j['foulsResetEachPeriod'] as bool? ?? false,
       overtimePeriods: (j['overtimePeriods'] as num?)?.toInt() ?? 0,
       overtimeDuration: ms('overtimeDurationMs', 5 * 60000),
       allowShootout: j['allowShootout'] as bool? ?? false,

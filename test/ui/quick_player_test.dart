@@ -203,11 +203,13 @@ void main() {
     await tester.tap(find.text('FOUL AWAY'));
     await settle();
     expect(find.text('Direct free hit for CH Vilassar'), findsOneWidget);
-    await tester.tap(find.text('GOAL'));
-    await settle();
+    // Who shoots is chosen in the same window, before GOAL / MISSED.
     expect(find.text('Who took it?'), findsOneWidget);
     await tester.tap(find.text('#9 Nil'));
     await settle();
+    await tester.tap(find.text('GOAL'));
+    await settle();
+    expect(find.text('Who took it?'), findsNothing, reason: 'no 2nd question');
     expect(find.text('Assist?'), findsNothing,
         reason: 'no assist on a free hit');
     final goal = (await repo.getEvents(m.id))

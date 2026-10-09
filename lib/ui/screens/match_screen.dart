@@ -665,19 +665,32 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         kind = ShotKinds.freeHit;
       }
     }
-    final result = await showModalBottomSheet<(TeamSide, String, bool)>(
+    final result = await showModalBottomSheet<_SetPieceResult>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => _SetPieceSheet(
           view: v, initialTeam: team, initialKind: kind, title: title),
     );
     if (result == null) return;
-    final (side, k, scored) = result;
-    await _record((c) => c.setPiece(side, kind: k, scored: scored, at: when),
-        heavy: scored);
+    // The shooter is chosen in the same window (my team with a roster):
+    // no second question afterwards.
+    List<MatchEvent>? events;
+    await _run(
+        (c) async => events = await c.setPiece(result.team,
+            kind: result.kind, scored: result.scored, at: when),
+        heavy: result.scored);
+    final main = events?.firstOrNull;
+    final shooter = result.shooter;
+    if (main != null && shooter != null) {
+      await _run((c) => c.setMeta(main, {
+            MetaKeys.playerId: shooter.id,
+            MetaKeys.playerName: shooter.label,
+          }));
+    }
   }
 
-  /// Foul; if it's the 10th, 15th, 20th… of the period, the rival's direct
+  /// Foul; if it is the 10th, 15th, 20th… of the match, the rival's direct
   /// free hit is offered right away (who shoots + GOAL / MISSED).
   Future<void> _foul(AppLocalizations l, MatchView v, TeamSide side) async {
     final sanction = v.state.foulLimitNear(side);
@@ -1178,7 +1191,7 @@ class _TeamScore extends StatelessWidget {
     final reached = s.foulLimitReached(side);
     final near = s.foulLimitNear(side);
     // Next direct free hit: 10, then 15, 20… (shows "10/10" when reached).
-    final n = t.foulsIn(period);
+    final n = s.foulCount(side);
     final target = reached ? n : s.foulTarget(side);
     final fouls = target == null ? '$n' : '$n/$target';
     final color = reached
@@ -1364,7 +1377,16 @@ class _TimeoutPanel extends StatelessWidget {
   }
 }
 
-class _SetPieceSheet extends StatefulWidget {
+typedef _SetPieceResult = ({
+  TeamSide team,
+  String kind,
+  bool scored,
+  TeamMember? shooter,
+});
+
+/// Penalty / direct free hit in one window: team, kind, who shoots (if that
+/// team is mine with a roster) and GOAL / MISSED.
+class _SetPieceSheet extends ConsumerStatefulWidget {
   const _SetPieceSheet(
       {required this.view,
       required this.initialTeam,
@@ -1376,75 +1398,127 @@ class _SetPieceSheet extends StatefulWidget {
   final String initialKind;
 
   @override
-  State<_SetPieceSheet> createState() => _SetPieceSheetState();
+  ConsumerState<_SetPieceSheet> createState() => _SetPieceSheetState();
 }
 
-class _SetPieceSheetState extends State<_SetPieceSheet> {
+class _SetPieceSheetState extends ConsumerState<_SetPieceSheet> {
   late TeamSide _team = widget.initialTeam;
   late String _kind = widget.initialKind;
+  TeamMember? _shooter;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final info = widget.view.info;
+    final teamId = _team == TeamSide.home ? info.homeTeamId : info.awayTeamId;
+    final players = teamId == null
+        ? const <TeamMember>[]
+        : ((ref.watch(teamMembersProvider(teamId)).valueOrNull ??
+                const <TeamMember>[])
+            .where((m) =>
+                m.role == MemberRole.player || m.role == MemberRole.goalkeeper)
+            .toList()
+          ..sort((a, b) => (a.number ?? 999).compareTo(b.number ?? 999)));
+    final color = teamColor(_team);
+    void done(bool scored) => Navigator.pop<_SetPieceResult>(context, (
+          team: _team,
+          kind: _kind,
+          scored: scored,
+          shooter: _shooter,
+        ));
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(widget.title ?? l.setPiece,
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            SegmentedButton<TeamSide>(
-              segments: [
-                ButtonSegment(
-                    value: TeamSide.home,
-                    label: Text(teamName(l, info, TeamSide.home),
-                        overflow: TextOverflow.ellipsis)),
-                ButtonSegment(
-                    value: TeamSide.away,
-                    label: Text(teamName(l, info, TeamSide.away),
-                        overflow: TextOverflow.ellipsis)),
-              ],
-              selected: {_team},
-              onSelectionChanged: (v) => setState(() => _team = v.first),
-            ),
-            const SizedBox(height: 8),
-            SegmentedButton<String>(
-              segments: [
-                ButtonSegment(value: ShotKinds.penalty, label: Text(l.penalty)),
-                ButtonSegment(value: ShotKinds.freeHit, label: Text(l.freeHit)),
-              ],
-              selected: {_kind},
-              onSelectionChanged: (v) => setState(() => _kind = v.first),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 72,
-              child: Row(children: [
-                Expanded(
-                  child: EventButton(
-                    label: l.shotScored,
-                    icon: Icons.sports_hockey,
-                    color: teamColor(_team),
-                    filled: true,
-                    onTap: () => Navigator.pop(context, (_team, _kind, true)),
-                  ),
+      child: ConstrainedBox(
+        constraints:
+            BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(widget.title ?? l.setPiece,
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              SegmentedButton<TeamSide>(
+                segments: [
+                  ButtonSegment(
+                      value: TeamSide.home,
+                      label: Text(teamName(l, info, TeamSide.home),
+                          overflow: TextOverflow.ellipsis)),
+                  ButtonSegment(
+                      value: TeamSide.away,
+                      label: Text(teamName(l, info, TeamSide.away),
+                          overflow: TextOverflow.ellipsis)),
+                ],
+                selected: {_team},
+                onSelectionChanged: (v) => setState(() {
+                  _team = v.first;
+                  _shooter = null;
+                }),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                segments: [
+                  ButtonSegment(
+                      value: ShotKinds.penalty, label: Text(l.penalty)),
+                  ButtonSegment(
+                      value: ShotKinds.freeHit, label: Text(l.freeHit)),
+                ],
+                selected: {_kind},
+                onSelectionChanged: (v) => setState(() => _kind = v.first),
+              ),
+              if (players.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text(l.whoShot,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: PistakColors.textMuted)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final m in players)
+                      ChoiceChip(
+                        label: Text(m.label,
+                            style: const TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.w800)),
+                        selected: _shooter?.id == m.id,
+                        selectedColor: color.withValues(alpha: 0.3),
+                        side: BorderSide(color: color, width: 1.5),
+                        materialTapTargetSize: MaterialTapTargetSize.padded,
+                        onSelected: (on) =>
+                            setState(() => _shooter = on ? m : null),
+                      ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: EventButton(
-                    label: l.shotMissed,
-                    icon: Icons.cancel_outlined,
-                    color: teamColor(_team),
-                    onTap: () => Navigator.pop(context, (_team, _kind, false)),
+              ],
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 72,
+                child: Row(children: [
+                  Expanded(
+                    child: EventButton(
+                      label: l.shotScored,
+                      icon: Icons.sports_hockey,
+                      color: color,
+                      filled: true,
+                      onTap: () => done(true),
+                    ),
                   ),
-                ),
-              ]),
-            ),
-          ],
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: EventButton(
+                      label: l.shotMissed,
+                      icon: Icons.cancel_outlined,
+                      color: color,
+                      onTap: () => done(false),
+                    ),
+                  ),
+                ]),
+              ),
+            ],
+          ),
         ),
       ),
     );

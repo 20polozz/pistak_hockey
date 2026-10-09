@@ -160,17 +160,22 @@ class MatchState {
 
   int _p() => period < 1 ? 1 : period;
 
+  /// Team fouls that count for the direct free hit: the whole match
+  /// (roller hockey) or only this period if the format resets them.
+  int foulCount(TeamSide team) => format.foulsResetEachPeriod
+      ? tally(team).foulsIn(_p())
+      : tally(team).fouls;
+
   /// The last foul of [team] gave a direct free hit (10th, 15th, 20th…).
   bool foulLimitReached(TeamSide team) =>
-      format.isFoulSanction(tally(team).foulsIn(_p()));
+      format.isFoulSanction(foulCount(team));
 
   /// The next foul of [team] gives a direct free hit.
   bool foulLimitNear(TeamSide team) =>
-      format.isFoulSanction(tally(team).foulsIn(_p()) + 1);
+      format.isFoulSanction(foulCount(team) + 1);
 
   /// Foul count of the next direct free hit for [team] (null = none).
-  int? foulTarget(TeamSide team) =>
-      format.nextFoulSanction(tally(team).foulsIn(_p()));
+  int? foulTarget(TeamSide team) => format.nextFoulSanction(foulCount(team));
 
   /// Timeouts [team] can still take this period (longest first).
   List<Duration> timeoutsLeft(TeamSide team) {

@@ -120,4 +120,40 @@ void main() {
     expect((await c.currentState()).away.saves, 0);
     await db.close();
   });
+
+  test('hockey: team fouls add up over the whole match (no reset at half)',
+      () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    final clock = FakeClock(DateTime.utc(2026, 10, 12, 18));
+    final repo = DriftMatchRepository(db, deviceId: 'd', clock: clock);
+    final m = await repo.createMatch(
+        sport: rollerHockey.id,
+        format: rollerHockey.defaultFormat.copyWith(stopClockOnEvents: false));
+    final c = MatchController(
+        matchId: m.id, deviceId: 'd', repository: repo, clock: clock);
+    await c.startMatch();
+    for (var i = 0; i < 6; i++) {
+      await c.foul(TeamSide.home);
+    }
+    await c.endPeriod();
+    await c.startNextPeriod();
+    var s = await c.currentState();
+    expect(s.period, 2);
+    expect(s.foulCount(TeamSide.home), 6, reason: 'not reset at half time');
+    for (var i = 0; i < 4; i++) {
+      await c.foul(TeamSide.home);
+    }
+    s = await c.currentState();
+    expect(s.foulCount(TeamSide.home), 10);
+    expect(s.foulLimitReached(TeamSide.home), isTrue);
+    expect(s.foulTarget(TeamSide.away), 10);
+    // A format that resets each period only counts this half.
+    expect(
+        MatchFormat.fromJson(rollerHockey.defaultFormat
+                .copyWith(foulsResetEachPeriod: true)
+                .toJson())
+            .foulsResetEachPeriod,
+        isTrue);
+    await db.close();
+  });
 }
