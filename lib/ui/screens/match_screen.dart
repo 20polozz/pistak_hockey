@@ -1127,6 +1127,14 @@ class _TeamScore extends StatelessWidget {
               fontFeatures: tabularFigures),
         ),
         _foulsLine(l, s, t, period),
+        // Goalkeeper saves of this team (whole match).
+        Text(
+          '${l.statSaves} ${t.saves}',
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12, color: PistakColors.textMuted),
+        ),
         // Blue-card exclusions: countdown of played time, never colour-only.
         TickerBuilder(
           interval: const Duration(milliseconds: 500),
