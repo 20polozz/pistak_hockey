@@ -404,7 +404,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         );
 
     const gap = 6.0;
-    const minRow = 50.0;
+    const minRow = 48.0;
     return LayoutBuilder(builder: (context, c) {
       final needed = rows.length * minRow + (rows.length - 1) * gap;
       if (c.maxHeight >= needed) {
@@ -423,7 +423,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         children: [
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0) const SizedBox(height: gap),
-            SizedBox(height: 64, child: row(rows[i].$2)),
+            SizedBox(height: 52, child: row(rows[i].$2)),
           ],
         ],
       );
@@ -577,18 +577,23 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   Widget _lastEventBar(AppLocalizations l, MatchView v) {
     final last = v.state.lastEvent;
     if (last == null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Text(l.tapStartHint,
-            textAlign: TextAlign.center,
-            style:
-                const TextStyle(color: PistakColors.textMuted, fontSize: 13)),
+      return SizedBox(
+        height: 56,
+        child: Center(
+          child: Text(l.tapStartHint,
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(color: PistakColors.textMuted, fontSize: 13)),
+        ),
       );
     }
     final (color, icon) = eventVisual(last);
     final needsTeam = last.type == EventTypes.card && last.team == null;
     final team = last.team;
-    final bar = Container(
+    // One-tap card without team: the team buttons go inside the same bar
+    // (never an extra row: the button grid must not move).
+    return Container(
+      height: 56,
       padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
       decoration: BoxDecoration(
         color: PistakColors.surfaceHigh,
@@ -600,33 +605,17 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '${formatMatchTime(last.matchTime)}  ${eventLabel(l, last)}'
-              '${team != null ? ' · ${teamName(l, v.info, team)}' : ''}',
-              maxLines: 1,
+              needsTeam
+                  ? '${formatMatchTime(last.matchTime)}  ${eventLabel(l, last)} · ${l.assignTeam}'
+                  : '${formatMatchTime(last.matchTime)}  ${eventLabel(l, last)}'
+                      '${team != null ? ' · ${teamName(l, v.info, team)}' : ''}',
+              maxLines: needsTeam ? 2 : 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontWeight: FontWeight.w600, fontSize: needsTeam ? 13 : 14),
             ),
           ),
-          TextButton.icon(
-            onPressed: () => _undo(l),
-            icon: const Icon(Icons.undo),
-            label: Text(l.undo),
-          ),
-        ],
-      ),
-    );
-    if (!needsTeam) return bar;
-    // One-tap card: optional team assignment right below, never blocking.
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(l.assignTeam,
-                  style: const TextStyle(
-                      fontSize: 13, color: PistakColors.textMuted)),
-            ),
+          if (needsTeam) ...[
             _MiniTeamButton(
               label: teamName(l, v.info, TeamSide.home).toUpperCase(),
               color: PistakColors.home,
@@ -637,11 +626,19 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               color: PistakColors.away,
               onTap: () => _run((c) => c.setTeam(last, TeamSide.away)),
             ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        bar,
-      ],
+            IconButton(
+              tooltip: l.undo,
+              onPressed: () => _undo(l),
+              icon: const Icon(Icons.undo, color: PistakColors.accent),
+            ),
+          ] else
+            TextButton.icon(
+              onPressed: () => _undo(l),
+              icon: const Icon(Icons.undo),
+              label: Text(l.undo),
+            ),
+        ],
+      ),
     );
   }
 
@@ -1057,12 +1054,17 @@ class _Scoreboard extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (s.phase == MatchPhase.paused)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 8),
-                      child: Icon(Icons.pause_circle_filled,
+                  // The pause icon's slot is always there (invisible while
+                  // running) and mirrored on the right: pausing never
+                  // rescales the clock nor moves the rest of the screen.
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Opacity(
+                      opacity: s.phase == MatchPhase.paused ? 1 : 0,
+                      child: const Icon(Icons.pause_circle_filled,
                           color: PistakColors.warning, size: 32),
                     ),
+                  ),
                   Text(
                     formatMatchTime(s.matchTimeAt(now)),
                     semanticsLabel: formatMatchTime(s.matchTimeAt(now)),
@@ -1078,6 +1080,7 @@ class _Scoreboard extends StatelessWidget {
                               : PistakColors.textMuted,
                     ),
                   ),
+                  const SizedBox(width: 40),
                 ],
               ),
             );
@@ -1153,33 +1156,40 @@ class _TeamScore extends StatelessWidget {
           interval: const Duration(milliseconds: 500),
           builder: (context, now) {
             final active = s.activeExclusionsAt(now, team: side);
-            if (active.isEmpty) return const SizedBox(height: 16);
-            return Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 4,
-              children: [
-                for (final (_, left) in active)
-                  Container(
-                    margin: const EdgeInsets.only(top: 2),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: PistakColors.blueCard.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: PistakColors.blueCard),
-                    ),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.timer_outlined,
-                          size: 12, color: PistakColors.blueCard),
-                      const SizedBox(width: 3),
-                      Text(formatMatchTime(left),
-                          style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              fontFeatures: tabularFigures)),
-                    ]),
-                  ),
-              ],
+            // Fixed height: a blue card never makes the scoreboard (and so
+            // the button grid) jump.
+            if (active.isEmpty) return const SizedBox(height: 20);
+            return SizedBox(
+              height: 20,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final (_, left) in active)
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: PistakColors.blueCard.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: PistakColors.blueCard),
+                        ),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(Icons.timer_outlined,
+                              size: 12, color: PistakColors.blueCard),
+                          const SizedBox(width: 3),
+                          Text(formatMatchTime(left),
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  fontFeatures: tabularFigures)),
+                        ]),
+                      ),
+                  ],
+                ),
+              ),
             );
           },
         ),
@@ -1670,7 +1680,13 @@ class _MiniTeamButton extends StatelessWidget {
             side: BorderSide(color: color),
           ),
           onPressed: onTap,
-          child: Text(label, style: const TextStyle(fontSize: 12)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 84),
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12)),
+          ),
         ),
       );
 }
