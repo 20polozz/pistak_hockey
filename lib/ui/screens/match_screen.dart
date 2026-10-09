@@ -992,8 +992,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 
   Future<void> _adjustClock(AppLocalizations l, MatchState s) async {
     final now = ref.read(clockProvider).now();
+    // Same as the big clock: time LEFT in the period.
+    final length = s.format.durationOf(s.period < 1 ? 1 : s.period);
     final ctrl =
-        TextEditingController(text: formatMatchTime(s.periodElapsedAt(now)));
+        TextEditingController(text: formatMatchTime(s.remainingAt(now)));
     final value = await showDialog<Duration>(
       context: context,
       builder: (ctx) {
@@ -1006,7 +1008,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               autofocus: true,
               keyboardType: TextInputType.datetime,
               decoration: InputDecoration(
-                  labelText: l.adjustClockHint, errorText: error),
+                  labelText: l.adjustClockRemainingHint, errorText: error),
             ),
             actions: [
               TextButton(
@@ -1014,10 +1016,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               FilledButton(
                 onPressed: () {
                   final d = parseMatchTime(ctrl.text);
-                  if (d == null) {
+                  if (d == null || d > length) {
                     setState(() => error = l.invalidTime);
                   } else {
-                    Navigator.pop(ctx, d);
+                    Navigator.pop(ctx, length - d); // → elapsed
                   }
                 },
                 child: Text(l.save),
@@ -1108,8 +1110,10 @@ class _Scoreboard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      formatMatchTime(s.matchTimeAt(now)),
-                      semanticsLabel: formatMatchTime(s.matchTimeAt(now)),
+                      // Countdown of the period (25:00 → 0:00). Event
+                      // times stay as elapsed match time (match report).
+                      formatMatchTime(s.remainingAt(now)),
+                      semanticsLabel: formatMatchTime(s.remainingAt(now)),
                       style: TextStyle(
                         fontSize: 64,
                         height: 1.0,

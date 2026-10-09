@@ -156,4 +156,31 @@ void main() {
         isTrue);
     await db.close();
   });
+
+  test('big clock counts down 25:00 → 0:00 per period', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    final clock = FakeClock(DateTime.utc(2026, 10, 12, 18));
+    final repo = DriftMatchRepository(db, deviceId: 'd', clock: clock);
+    final m = await repo.createMatch(
+        sport: rollerHockey.id,
+        format: rollerHockey.defaultFormat.copyWith(stopClockOnEvents: false));
+    final c = MatchController(
+        matchId: m.id, deviceId: 'd', repository: repo, clock: clock);
+    var s = await c.currentState();
+    expect(s.remainingAt(clock.now()), const Duration(minutes: 25));
+    await c.startMatch();
+    clock.advance(const Duration(minutes: 3, seconds: 20));
+    s = await c.currentState();
+    expect(
+        s.remainingAt(clock.now()), const Duration(minutes: 21, seconds: 40));
+    expect(s.matchTimeAt(clock.now()), const Duration(minutes: 3, seconds: 20),
+        reason: 'events keep the elapsed time');
+    clock.advance(const Duration(minutes: 30));
+    expect(s.remainingAt(clock.now()), Duration.zero, reason: 'never < 0');
+    await c.endPeriod();
+    await c.startNextPeriod();
+    s = await c.currentState();
+    expect(s.remainingAt(clock.now()), const Duration(minutes: 25));
+    await db.close();
+  });
 }

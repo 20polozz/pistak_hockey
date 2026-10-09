@@ -334,5 +334,6 @@
   "timeoutOf": "TEMPS MORT · {team}",
   "freeHitDue": "Falta directa per a {team}",
   "formatShortTimeoutSeconds": "Temps mort curt (s, 0 = cap)",
+  "adjustClockRemainingHint": "Temps que queda de la part (mm:ss)",
   "formatFoulEvery": "Després, cada N faltes (0 = un cop)"
 }

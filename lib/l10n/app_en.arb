@@ -545,5 +545,6 @@
     }
   },
   "formatShortTimeoutSeconds": "Short timeout (s, 0 = none)",
+  "adjustClockRemainingHint": "Time left in this period (mm:ss)",
   "formatFoulEvery": "Then every N fouls (0 = once)"
 }

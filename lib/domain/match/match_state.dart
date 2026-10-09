@@ -209,6 +209,15 @@ class MatchState {
     return format.startOf(period) + periodElapsedAt(now);
   }
 
+  /// Time left in the current period at [now] (the big clock counts down,
+  /// 25:00 → 0:00). Before the start: the first period's length. Never
+  /// negative: once the period's time is up it stays at 0:00.
+  Duration remainingAt(DateTime now) {
+    if (period <= 0) return format.durationOf(1);
+    final left = format.durationOf(period) - periodElapsedAt(now);
+    return left.isNegative ? Duration.zero : left;
+  }
+
   /// True if the current period has exceeded its nominal duration.
   bool isOvertimeAt(DateTime now) =>
       period > 0 && periodElapsedAt(now) > format.durationOf(period);
