@@ -137,7 +137,7 @@ void main() {
     }
 
     await settle();
-    await tester.tap(find.text('BLUE'));
+    await tester.tap(find.byTooltip('BLUE'));
     await settle();
     expect(find.text('Who got the card?'), findsOneWidget);
     await tester.tap(find.text('#4 Jan'));
@@ -146,6 +146,87 @@ void main() {
         .firstWhere((e) => e.type == EventTypes.card);
     expect(card.team, TeamSide.home);
     expect(card.playerName, '#4 Jan');
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
+  testWidgets(
+      '10th foul → direct free hit → who shoots (no assist); '
+      'timeout asks 1\' or 30\'\'', (tester) async {
+    final teams = DriftTeamRepository(db);
+    final team = await teams.createTeam(name: 'CH Vilassar');
+    await teams.addMember(team.id,
+        role: MemberRole.player, name: 'Nil', number: 9);
+    await teams.addMember(team.id,
+        role: MemberRole.player, name: 'Ot', number: 5);
+    final repo = DriftMatchRepository(db, deviceId: 'd');
+    final m = await repo.createMatch(
+        sport: rollerHockey.id,
+        format: rollerHockey.defaultFormat.copyWith(stopClockOnEvents: false),
+        homeName: 'CH Vilassar',
+        homeTeamId: team.id);
+    final c = MatchController(
+        matchId: m.id,
+        deviceId: 'd',
+        repository: repo,
+        clock: const SystemClock());
+    await c.startMatch();
+    for (var i = 0; i < 9; i++) {
+      await c.foul(TeamSide.away);
+    }
+
+    tester.view.physicalSize = const Size(412, 915);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        deviceIdProvider.overrideWithValue('d'),
+      ],
+      child: MaterialApp(
+        theme: buildPistakTheme(),
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: MatchScreen(matchId: m.id),
+      ),
+    ));
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    await settle();
+    expect(find.textContaining('9/10'), findsOneWidget);
+    await tester.tap(find.text('FOUL AWAY'));
+    await settle();
+    expect(find.text('Direct free hit for CH Vilassar'), findsOneWidget);
+    await tester.tap(find.text('GOAL'));
+    await settle();
+    expect(find.text('Who took it?'), findsOneWidget);
+    await tester.tap(find.text('#9 Nil'));
+    await settle();
+    expect(find.text('Assist?'), findsNothing,
+        reason: 'no assist on a free hit');
+    final goal = (await repo.getEvents(m.id))
+        .firstWhere((e) => e.type == EventTypes.goal);
+    expect(goal.team, TeamSide.home);
+    expect(goal.shotKind, ShotKinds.freeHit);
+    expect(goal.playerName, '#9 Nil');
+    expect(find.textContaining('10/10'), findsOneWidget);
+
+    // Timeout: both lengths left → choose.
+    await tester.tap(find.text('TIMEOUT HOME'));
+    await settle();
+    expect(find.text('Which timeout?'), findsOneWidget);
+    await tester.tap(find.text("30''"));
+    await settle();
+    final s = await c.currentState();
+    expect(s.activeTimeout?.duration, const Duration(seconds: 30));
+    expect(find.text('TIMEOUT · CH VILASSAR'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));

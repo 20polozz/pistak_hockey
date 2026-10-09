@@ -29,3 +29,11 @@ String formatDate(DateTime t) {
   final l = t.toLocal();
   return '${l.day.toString().padLeft(2, '0')}/${l.month.toString().padLeft(2, '0')}/${l.year}';
 }
+
+/// Short timeout length as said in a pavilion: 1', 30'', 1'30''.
+String formatTimeoutLength(Duration d) {
+  final m = d.inMinutes;
+  final s = d.inSeconds % 60;
+  if (m == 0) return "$s''";
+  return s == 0 ? "$m'" : "$m'$s''";
+}

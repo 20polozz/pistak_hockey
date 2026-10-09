@@ -31,6 +31,10 @@ class TeamTally {
   int goals = 0;
   final Map<int, int> foulsByPeriod = {};
   final Map<int, int> timeoutsByPeriod = {};
+
+  /// Length of each timeout taken, by period (1:00 / 0:30).
+  final Map<int, List<Duration>> timeoutLengthsByPeriod = {};
+  int saves = 0;
   final Map<String, int> cards = {};
   int shootoutScored = 0;
   int shootoutAttempts = 0;
@@ -68,9 +72,10 @@ class Exclusion {
 }
 
 class ActiveTimeout {
-  const ActiveTimeout(this.team, this.startedAt);
+  const ActiveTimeout(this.team, this.startedAt, this.duration);
   final TeamSide team;
   final DateTime startedAt;
+  final Duration duration;
 }
 
 /// Snapshot of a match computed by [MatchProjector] from its events.
@@ -153,16 +158,27 @@ class MatchState {
     ];
   }
 
-  /// Fouls of [team] in the current period reached the configured limit.
-  bool foulLimitReached(TeamSide team) {
-    final limit = format.foulLimit;
-    return limit != null && tally(team).foulsIn(period) >= limit;
-  }
+  int _p() => period < 1 ? 1 : period;
 
-  /// One foul away from the limit.
-  bool foulLimitNear(TeamSide team) {
-    final limit = format.foulLimit;
-    return limit != null && tally(team).foulsIn(period) == limit - 1;
+  /// The last foul of [team] gave a direct free hit (10th, 15th, 20th…).
+  bool foulLimitReached(TeamSide team) =>
+      format.isFoulSanction(tally(team).foulsIn(_p()));
+
+  /// The next foul of [team] gives a direct free hit.
+  bool foulLimitNear(TeamSide team) =>
+      format.isFoulSanction(tally(team).foulsIn(_p()) + 1);
+
+  /// Foul count of the next direct free hit for [team] (null = none).
+  int? foulTarget(TeamSide team) =>
+      format.nextFoulSanction(tally(team).foulsIn(_p()));
+
+  /// Timeouts [team] can still take this period (longest first).
+  List<Duration> timeoutsLeft(TeamSide team) {
+    final left = [...format.timeoutSlots];
+    for (final d in tally(team).timeoutLengthsByPeriod[_p()] ?? const []) {
+      if (!left.remove(d) && left.isNotEmpty) left.removeAt(0);
+    }
+    return left;
   }
 
   int get totalCards =>
@@ -204,7 +220,7 @@ class MatchState {
   Duration? timeoutRemainingAt(DateTime now) {
     final t = activeTimeout;
     if (t == null) return null;
-    final left = format.timeoutDuration - now.difference(t.startedAt);
+    final left = t.duration - now.difference(t.startedAt);
     return left.isNegative ? Duration.zero : left;
   }
 

@@ -192,10 +192,21 @@ class EventFactory {
         a, s, [a.eventAt(s, EventTypes.card, subtype: color, team: team)]);
   }
 
-  /// Timeout. Pauses the clock too if the format says so and it runs.
-  List<MatchEvent> timeout(MatchState s, TeamSide team) {
+  /// Goalkeeper save of [team]. Play goes on: the clock is not stopped.
+  List<MatchEvent> save(MatchState s, TeamSide team) =>
+      [_Action(this, clock.now()).eventAt(s, EventTypes.save, team: team)];
+
+  /// Timeout of [duration] (default: the longest one [team] has left).
+  /// Pauses the clock too if the format says so and it runs.
+  List<MatchEvent> timeout(MatchState s, TeamSide team, {Duration? duration}) {
     final a = _Action(this, clock.now());
-    final events = [a.eventAt(s, EventTypes.timeout, team: team)];
+    final left = s.timeoutsLeft(team);
+    final length =
+        duration ?? (left.isNotEmpty ? left.first : s.format.timeoutDuration);
+    final events = [
+      a.eventAt(s, EventTypes.timeout,
+          team: team, metadata: {MetaKeys.durationMs: length.inMilliseconds})
+    ];
     if (s.phase == MatchPhase.running && s.format.stopClockOnTimeout) {
       events.add(
           a.eventAt(s, EventTypes.clockPause, subtype: PauseReasons.timeout));

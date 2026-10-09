@@ -137,6 +137,12 @@ class MatchProjector {
           if (team != null) s.tally(team).recordShot(e.shotKind, scored: false);
         }
 
+      case EventTypes.save:
+        {
+          final team = e.team;
+          if (team != null) s.tally(team).saves++;
+        }
+
       case EventTypes.foul:
         {
           final team = e.team;
@@ -168,7 +174,12 @@ class MatchProjector {
           if (team != null) {
             final t = s.tally(team);
             t.timeoutsByPeriod[e.period] = t.timeoutsIn(e.period) + 1;
-            if (s.isInPlay) s.activeTimeout = ActiveTimeout(team, ts);
+            final ms = (e.metadata[MetaKeys.durationMs] as num?)?.toInt();
+            final length = ms == null || ms <= 0
+                ? s.format.timeoutDuration
+                : Duration(milliseconds: ms);
+            (t.timeoutLengthsByPeriod[e.period] ??= []).add(length);
+            if (s.isInPlay) s.activeTimeout = ActiveTimeout(team, ts, length);
           }
         }
 

@@ -20,6 +20,7 @@ P = {  # placeholders: key -> {name: type}
  'shootoutScore': {'home': 'int', 'away': 'int'},
  'exclusionBanner': {'team': 'String', 'time': 'String'},
  'backupRestored': {'matches': 'int'}, 'appVersion': {'version': 'String'},
+ 'timeoutOf': {'team': 'String'}, 'freeHitDue': {'team': 'String'},
 }
 
 S = {
@@ -348,6 +349,19 @@ S = {
 'errTooManyAttempts': ('Too many attempts. Try again in 15 minutes.', 'Massa intents. Torna-ho a provar d\'aquí 15 minuts.', 'Demasiados intentos. Inténtalo en 15 minutos.'),
 'errNetwork': ('No connection to the server. You can keep using PISTAK offline.', 'Sense connexió amb el servidor. Pots continuar fent servir PISTAK sense connexió.', 'Sin conexión con el servidor. Puedes seguir usando PISTAK sin conexión.'),
 'savedLocally': ('Saved on this device', 'Guardat en aquest dispositiu', 'Guardado en este dispositivo'),
+'saveHome': ('SAVE HOME', 'PARADA LOCAL', 'PARADA LOCAL'),
+'saveAway': ('SAVE AWAY', 'PARADA VISITANT', 'PARADA VISITANTE'),
+'evSave': ('Save', 'Parada', 'Parada'),
+'statSaves': ('Saves', 'Parades', 'Paradas'),
+'statsSavesShort': ('SV', 'PAR', 'PAR'),
+'whoSaved': ('Which goalkeeper?', 'Quin porter?', '¿Qué portero?'),
+'timeoutChoose': ('Which timeout?', 'Quin temps mort?', '¿Qué tiempo muerto?'),
+'timeoutUsed': ('used', 'gastat', 'gastado'),
+'timeoutNoneLeft': ('none left', 'cap', 'ninguno'),
+'timeoutOf': ('TIMEOUT · {team}', 'TEMPS MORT · {team}', 'TIEMPO MUERTO · {team}'),
+'freeHitDue': ('Direct free hit for {team}', 'Falta directa per a {team}', 'Falta directa para {team}'),
+'formatShortTimeoutSeconds': ('Short timeout (s, 0 = none)', 'Temps mort curt (s, 0 = cap)', 'Tiempo muerto corto (s, 0 = ninguno)'),
+'formatFoulEvery': ('Then every N fouls (0 = once)', 'Després, cada N faltes (0 = un cop)', 'Después, cada N faltas (0 = una vez)'),
 }
 
 out = os.path.join(os.path.dirname(__file__), '..', 'lib', 'l10n')

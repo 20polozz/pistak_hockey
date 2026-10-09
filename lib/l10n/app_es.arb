@@ -321,5 +321,18 @@
   "errInvalidEmail": "Correo no válido.",
   "errTooManyAttempts": "Demasiados intentos. Inténtalo en 15 minutos.",
   "errNetwork": "Sin conexión con el servidor. Puedes seguir usando PISTAK sin conexión.",
-  "savedLocally": "Guardado en este dispositivo"
+  "savedLocally": "Guardado en este dispositivo",
+  "saveHome": "PARADA LOCAL",
+  "saveAway": "PARADA VISITANTE",
+  "evSave": "Parada",
+  "statSaves": "Paradas",
+  "statsSavesShort": "PAR",
+  "whoSaved": "¿Qué portero?",
+  "timeoutChoose": "¿Qué tiempo muerto?",
+  "timeoutUsed": "gastado",
+  "timeoutNoneLeft": "ninguno",
+  "timeoutOf": "TIEMPO MUERTO · {team}",
+  "freeHitDue": "Falta directa para {team}",
+  "formatShortTimeoutSeconds": "Tiempo muerto corto (s, 0 = ninguno)",
+  "formatFoulEvery": "Después, cada N faltas (0 = una vez)"
 }

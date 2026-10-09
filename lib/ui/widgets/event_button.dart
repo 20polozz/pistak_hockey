@@ -110,3 +110,70 @@ class EventButton extends StatelessWidget {
     );
   }
 }
+
+/// Card button: just the card, in its colour (the name is only for screen
+/// readers). Same size and touch area as [EventButton].
+class CardButton extends StatelessWidget {
+  const CardButton({
+    super.key,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: label,
+        child: Material(
+          color: PistakColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: color.withValues(alpha: 0.6), width: 2),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            splashColor: color.withValues(alpha: 0.35),
+            highlightColor: color.withValues(alpha: 0.2),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: LayoutBuilder(builder: (context, box) {
+                // A real card is ~2:3; fill most of the button height.
+                final h = (box.maxHeight.isFinite ? box.maxHeight : 56) * 0.66;
+                final cardH = h.clamp(30.0, 64.0);
+                return Center(
+                  child: Transform.rotate(
+                    angle: -0.12,
+                    child: Container(
+                      width: cardH * 0.7,
+                      height: cardH,
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(cardH * 0.1),
+                        boxShadow: const [
+                          BoxShadow(
+                              color: Colors.black54,
+                              blurRadius: 6,
+                              offset: Offset(2, 3)),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

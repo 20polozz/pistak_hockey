@@ -227,7 +227,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   0: FlexColumnWidth(4),
                   1: FlexColumnWidth(1),
                   2: FlexColumnWidth(1),
-                  3: FlexColumnWidth(2),
+                  3: FlexColumnWidth(1),
+                  4: FlexColumnWidth(2),
                 },
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 children: [
@@ -237,6 +238,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         label: l.statGoals, child: head(l.statsGoalsShort)),
                     Semantics(
                         label: l.assist, child: head(l.statsAssistsShort)),
+                    Semantics(
+                        label: l.statSaves, child: head(l.statsSavesShort)),
                     head(l.statsCards),
                   ]),
                   for (final p in rows)
@@ -245,6 +248,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                           maxLines: 1, overflow: TextOverflow.ellipsis),
                       num(p.goals, bold: true),
                       num(p.assists),
+                      num(p.saves),
                       _cardDots(p),
                     ]),
                 ],

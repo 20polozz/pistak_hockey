@@ -21,6 +21,7 @@ class PlayerStats {
   int yellow = 0;
   int blue = 0;
   int red = 0;
+  int saves = 0;
   int get cards => yellow + blue + red;
 }
 
@@ -39,6 +40,7 @@ class TeamStats {
   int penaltiesTaken = 0;
   int freeHitsScored = 0;
   int freeHitsTaken = 0;
+  int saves = 0;
   final Map<String, PlayerStats> players = {};
 
   int get goalDifference => goalsFor - goalsAgainst;
@@ -94,6 +96,7 @@ class TeamStats {
       t.penaltiesTaken += mine.penaltyAttempts;
       t.freeHitsScored += mine.freeHitScored;
       t.freeHitsTaken += mine.freeHitAttempts;
+      t.saves += mine.saves;
 
       for (final e in m.events) {
         if (e.isVoided || e.team != side) continue;
@@ -105,6 +108,8 @@ class TeamStats {
           switch (e.type) {
             case EventTypes.goal:
               p.goals++;
+            case EventTypes.save:
+              p.saves++;
             case EventTypes.card:
               switch (e.subtype) {
                 case CardColors.yellow:

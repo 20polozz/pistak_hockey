@@ -111,8 +111,10 @@ class MatchController {
       _act((f, s) => f.foul(s, team));
   Future<List<MatchEvent>> card(String color, {TeamSide? team}) =>
       _act((f, s) => f.card(s, color, team: team));
-  Future<List<MatchEvent>> timeout(TeamSide team) =>
-      _act((f, s) => f.timeout(s, team));
+  Future<List<MatchEvent>> timeout(TeamSide team, {Duration? duration}) =>
+      _act((f, s) => f.timeout(s, team, duration: duration));
+  Future<List<MatchEvent>> save(TeamSide team) =>
+      _act((f, s) => f.save(s, team));
   Future<List<MatchEvent>> endTimeout() => _act((f, s) => f.endTimeout(s));
 
   /// [at] = moment the user pressed INCIDÈNCIA (before typing/recording).

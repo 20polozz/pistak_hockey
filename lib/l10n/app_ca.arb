@@ -321,5 +321,18 @@
   "errInvalidEmail": "Correu no vàlid.",
   "errTooManyAttempts": "Massa intents. Torna-ho a provar d'aquí 15 minuts.",
   "errNetwork": "Sense connexió amb el servidor. Pots continuar fent servir PISTAK sense connexió.",
-  "savedLocally": "Guardat en aquest dispositiu"
+  "savedLocally": "Guardat en aquest dispositiu",
+  "saveHome": "PARADA LOCAL",
+  "saveAway": "PARADA VISITANT",
+  "evSave": "Parada",
+  "statSaves": "Parades",
+  "statsSavesShort": "PAR",
+  "whoSaved": "Quin porter?",
+  "timeoutChoose": "Quin temps mort?",
+  "timeoutUsed": "gastat",
+  "timeoutNoneLeft": "cap",
+  "timeoutOf": "TEMPS MORT · {team}",
+  "freeHitDue": "Falta directa per a {team}",
+  "formatShortTimeoutSeconds": "Temps mort curt (s, 0 = cap)",
+  "formatFoulEvery": "Després, cada N faltes (0 = un cop)"
 }

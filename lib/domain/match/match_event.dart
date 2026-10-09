@@ -23,6 +23,9 @@ abstract final class EventTypes {
   /// (a scored one is a GOAL with metadata shotKind).
   static const shot = 'SHOT';
 
+  /// Goalkeeper save (team = the goalkeeper's team). Doesn't stop the clock.
+  static const save = 'SAVE';
+
   /// Events that change the clock / match phase.
   static const clockTypes = {
     matchStart,
@@ -83,6 +86,7 @@ abstract final class MetaKeys {
   static const assistId = 'assistId'; // '' = explicitly "no assist"
   static const assistName = 'assistName';
   static const shotKind = 'shotKind'; // penalty | freeHit (in-game shots)
+  static const durationMs = 'durationMs'; // timeout length
   static const transcriptStatus = 'transcriptStatus';
 }
 

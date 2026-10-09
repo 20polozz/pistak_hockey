@@ -77,13 +77,18 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     final isCard = e.type == EventTypes.card;
     if (linked.isEmpty || (!isCard && !linked.contains(e.team))) return;
     if (!isCard &&
-        !const {EventTypes.goal, EventTypes.foul, EventTypes.shot}
-            .contains(e.type)) {
+        !const {
+          EventTypes.goal,
+          EventTypes.foul,
+          EventTypes.shot,
+          EventTypes.save,
+        }.contains(e.type)) {
       return;
     }
     final l = AppLocalizations.of(context);
     final title = switch (e.type) {
-      EventTypes.goal => l.whoScored,
+      EventTypes.goal => e.shotKind != null ? l.whoShot : l.whoScored,
+      EventTypes.save => l.whoSaved,
       EventTypes.foul => l.whoFouled,
       EventTypes.shot => l.whoShot,
       _ => l.whoCard,
@@ -111,7 +116,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           }));
     }
     // Goals: then the assist (or "no assist").
-    if (e.type == EventTypes.goal && who.player != null && mounted) {
+    if (e.type == EventTypes.goal &&
+        e.shotKind == null &&
+        who.player != null &&
+        mounted) {
       final assist = await showModalBottomSheet<_Who>(
         context: context,
         isScrollControlled: true,
@@ -203,7 +211,14 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         child: SafeArea(
           child: LayoutBuilder(builder: (context, c) {
             final banner = _Banner(
-                view: v, onEndTimeout: () => _run((c) => c.endTimeout()));
+                view: v,
+                // End of timeout = play goes on: one tap, clock running.
+                onEndTimeout: () => _run((c) async {
+                      await c.endTimeout();
+                      final st = await c.currentState();
+                      if (st.isInPlay && !st.isClockRunning) await c.resume();
+                      return null;
+                    }));
             // Tablets / desktop browsers in landscape: info left, buttons right.
             if (c.maxWidth >= 900 && c.maxWidth > c.maxHeight) {
               return Padding(
@@ -263,10 +278,16 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     if (s.isShootout) return _shootoutPanel(l, v);
     final sport = Sports.byId(v.info.sport);
     final period = s.period < 1 ? 1 : s.period;
-    final maxTo = s.format.timeoutsPerTeamPerPeriod;
-
-    String toLabel(TeamSide side) =>
-        '${s.tally(side).timeoutsIn(period)}/$maxTo';
+    // Timeouts still available this period, e.g. "1' · 30''".
+    String toLabel(TeamSide side) {
+      if (s.format.timeoutSlots.isEmpty) {
+        return '${s.tally(side).timeoutsIn(period)}';
+      }
+      final left = s.timeoutsLeft(side);
+      return left.isEmpty
+          ? l.timeoutNoneLeft
+          : left.map(formatTimeoutLength).join(' · ');
+    }
 
     final rows = <(int, List<Widget>)>[
       (
@@ -295,23 +316,40 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             label: l.foulHome,
             icon: Icons.front_hand,
             color: PistakColors.home,
-            onTap: () => _record((c) => c.foul(TeamSide.home)),
+            onTap: () => _foul(l, v, TeamSide.home),
           ),
           EventButton(
             label: l.foulAway,
             icon: Icons.front_hand,
             color: PistakColors.away,
-            onTap: () => _record((c) => c.foul(TeamSide.away)),
+            onTap: () => _foul(l, v, TeamSide.away),
           ),
         ]
       ),
+      if (sport.supportedEventTypes.contains(EventTypes.save))
+        (
+          2,
+          [
+            EventButton(
+              label: l.saveHome,
+              icon: Icons.shield_outlined,
+              color: PistakColors.home,
+              onTap: () => _record((c) => c.save(TeamSide.home)),
+            ),
+            EventButton(
+              label: l.saveAway,
+              icon: Icons.shield_outlined,
+              color: PistakColors.away,
+              onTap: () => _record((c) => c.save(TeamSide.away)),
+            ),
+          ]
+        ),
       (
         2,
         [
           for (final color in sport.cardColors)
-            EventButton(
+            CardButton(
               label: _cardLabel(l, color),
-              icon: Icons.style,
               color: cardColor(color),
               onTap: () => _record((c) => c.card(color)),
             ),
@@ -325,14 +363,14 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             sublabel: toLabel(TeamSide.home),
             icon: Icons.timer_outlined,
             color: PistakColors.home,
-            onTap: () => _run((c) => c.timeout(TeamSide.home)),
+            onTap: () => _timeout(l, v, TeamSide.home),
           ),
           EventButton(
             label: l.timeoutAway,
             sublabel: toLabel(TeamSide.away),
             icon: Icons.timer_outlined,
             color: PistakColors.away,
-            onTap: () => _run((c) => c.timeout(TeamSide.away)),
+            onTap: () => _timeout(l, v, TeamSide.away),
           ),
         ]
       ),
@@ -365,8 +403,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           ],
         );
 
-    const gap = 8.0;
-    const minRow = 56.0;
+    const gap = 6.0;
+    const minRow = 50.0;
     return LayoutBuilder(builder: (context, c) {
       final needed = rows.length * minRow + (rows.length - 1) * gap;
       if (c.maxHeight >= needed) {
@@ -611,29 +649,105 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
 
   /// Penalty / direct free hit: team + kind + GOAL/MISSED. The time is the
   /// moment the button was pressed, not when the result is chosen.
-  Future<void> _openSetPieceSheet(AppLocalizations l, MatchView v) async {
-    final at = ref.read(clockProvider).now();
-    _session.tap();
+  Future<void> _openSetPieceSheet(AppLocalizations l, MatchView v,
+      {TeamSide? forTeam, String? title, DateTime? at}) async {
+    final when = at ?? ref.read(clockProvider).now();
+    if (at == null) _session.tap();
     final s = v.state;
-    // After 10 fouls the OTHER team gets a direct free hit: preselect it.
-    TeamSide team = TeamSide.home;
-    String kind = ShotKinds.penalty;
-    if (s.foulLimitReached(TeamSide.home)) {
-      team = TeamSide.away;
-      kind = ShotKinds.freeHit;
-    } else if (s.foulLimitReached(TeamSide.away)) {
-      kind = ShotKinds.freeHit;
+    // After 10, 15, 20… fouls the OTHER team gets a direct free hit.
+    TeamSide team = forTeam ?? TeamSide.home;
+    String kind = forTeam != null ? ShotKinds.freeHit : ShotKinds.penalty;
+    if (forTeam == null) {
+      if (s.foulLimitReached(TeamSide.home)) {
+        team = TeamSide.away;
+        kind = ShotKinds.freeHit;
+      } else if (s.foulLimitReached(TeamSide.away)) {
+        kind = ShotKinds.freeHit;
+      }
     }
     final result = await showModalBottomSheet<(TeamSide, String, bool)>(
       context: context,
       showDragHandle: true,
-      builder: (_) =>
-          _SetPieceSheet(view: v, initialTeam: team, initialKind: kind),
+      builder: (_) => _SetPieceSheet(
+          view: v, initialTeam: team, initialKind: kind, title: title),
     );
     if (result == null) return;
     final (side, k, scored) = result;
-    await _record((c) => c.setPiece(side, kind: k, scored: scored, at: at),
+    await _record((c) => c.setPiece(side, kind: k, scored: scored, at: when),
         heavy: scored);
+  }
+
+  /// Foul; if it's the 10th, 15th, 20th… of the period, the rival's direct
+  /// free hit is offered right away (who shoots + GOAL / MISSED).
+  Future<void> _foul(AppLocalizations l, MatchView v, TeamSide side) async {
+    final sanction = v.state.foulLimitNear(side);
+    final at = ref.read(clockProvider).now();
+    await _record((c) => c.foul(side));
+    if (!sanction || !mounted) return;
+    final rival = side.opponent;
+    final now = ref.read(matchViewProvider(widget.matchId)).valueOrNull ?? v;
+    await _openSetPieceSheet(l, now,
+        forTeam: rival,
+        title: l.freeHitDue(teamName(l, v.info, rival)),
+        at: at);
+  }
+
+  /// Timeout: if both lengths (1:00 / 0:30) are left, asks which one.
+  Future<void> _timeout(AppLocalizations l, MatchView v, TeamSide side) async {
+    final slots = v.state.format.timeoutSlots;
+    final left = v.state.timeoutsLeft(side);
+    if (slots.isEmpty || left.toSet().length == 1) {
+      await _run((c) => c.timeout(side));
+      return;
+    }
+    _session.tap();
+    final options =
+        left.isEmpty ? slots.toSet().toList() : left.toSet().toList();
+    final picked = await showModalBottomSheet<Duration>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l.timeoutChoose, style: Theme.of(ctx).textTheme.titleMedium),
+              Text(teamName(l, v.info, side),
+                  style: TextStyle(
+                      color: teamColor(side), fontWeight: FontWeight.w700)),
+              if (left.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text('${l.timeoutsShort}: ${l.timeoutNoneLeft}',
+                      style: const TextStyle(color: PistakColors.warning)),
+                ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 72,
+                child: Row(children: [
+                  for (var i = 0; i < options.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    Expanded(
+                      child: EventButton(
+                        label: formatTimeoutLength(options[i]),
+                        icon: Icons.timer_outlined,
+                        color: teamColor(side),
+                        filled: i == 0,
+                        onTap: () => Navigator.pop(ctx, options[i]),
+                      ),
+                    ),
+                  ],
+                ]),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null) return;
+    await _run((c) => c.timeout(side, duration: picked));
   }
 
   Future<void> _undo(AppLocalizations l) async {
@@ -1053,11 +1167,12 @@ class _TeamScore extends StatelessWidget {
   }
 
   Widget _foulsLine(AppLocalizations l, MatchState s, TeamTally t, int period) {
-    final limit = s.format.foulLimit;
     final reached = s.foulLimitReached(side);
     final near = s.foulLimitNear(side);
-    final fouls =
-        limit == null ? '${t.foulsIn(period)}' : '${t.foulsIn(period)}/$limit';
+    // Next direct free hit: 10, then 15, 20… (shows "10/10" when reached).
+    final n = t.foulsIn(period);
+    final target = reached ? n : s.foulTarget(side);
+    final fouls = target == null ? '$n' : '$n/$target';
     final color = reached
         ? PistakColors.danger
         : near
@@ -1098,21 +1213,8 @@ class _Banner extends StatelessWidget {
     final s = view.state;
     final timeout = s.activeTimeout;
     if (s.isInPlay && timeout != null) {
-      return _bar(
-        PistakColors.warning,
-        Icons.timer_outlined,
-        (now) => l.timeoutBanner(teamName(l, view.info, timeout.team),
-            formatMatchTime(s.timeoutRemainingAt(now) ?? Duration.zero)),
-        action: FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: PistakColors.warning,
-            foregroundColor: Colors.black,
-            minimumSize: const Size(0, 44),
-          ),
-          onPressed: onEndTimeout,
-          child: Text(l.endTimeout),
-        ),
-      );
+      return _TimeoutPanel(
+          view: view, timeout: timeout, onEndTimeout: onEndTimeout);
     }
     if (s.phase == MatchPhase.onBreak) {
       return _bar(
@@ -1157,12 +1259,111 @@ class _Banner extends StatelessWidget {
       );
 }
 
+/// Running timeout, compact (the button grid must still fit): team +
+/// progress, big countdown and one RESUME button (ends the timeout and
+/// restarts the clock in a single tap).
+class _TimeoutPanel extends StatelessWidget {
+  const _TimeoutPanel(
+      {required this.view, required this.timeout, required this.onEndTimeout});
+  final MatchView view;
+  final ActiveTimeout timeout;
+  final VoidCallback onEndTimeout;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final s = view.state;
+    final color = teamColor(timeout.team);
+    final total = timeout.duration.inMilliseconds;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+        decoration: BoxDecoration(
+          color: PistakColors.surfaceHigh,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color, width: 2),
+        ),
+        child: TickerBuilder(builder: (context, now) {
+          final left = s.timeoutRemainingAt(now) ?? Duration.zero;
+          final over = left == Duration.zero;
+          final progress =
+              total <= 0 ? 0.0 : (left.inMilliseconds / total).clamp(0.0, 1.0);
+          return Row(children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l.timeoutOf(
+                        teamName(l, view.info, timeout.team).toUpperCase()),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                        letterSpacing: 0.3),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    formatMatchTime(left),
+                    style: TextStyle(
+                        color: over ? PistakColors.danger : Colors.white,
+                        fontSize: 26,
+                        height: 1.1,
+                        fontWeight: FontWeight.w900,
+                        fontFeatures: tabularFigures),
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 5,
+                      color: over ? PistakColors.danger : color,
+                      backgroundColor: color.withValues(alpha: 0.2),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Tooltip(
+              message: l.endTimeout,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: PistakColors.accent,
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size(0, 56),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  textStyle: const TextStyle(
+                      fontWeight: FontWeight.w800, letterSpacing: 0.4),
+                ),
+                onPressed: onEndTimeout,
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: Text(l.resumeMatch),
+              ),
+            ),
+          ]);
+        }),
+      ),
+    );
+  }
+}
+
 class _SetPieceSheet extends StatefulWidget {
   const _SetPieceSheet(
       {required this.view,
       required this.initialTeam,
-      required this.initialKind});
+      required this.initialKind,
+      this.title});
   final MatchView view;
+  final String? title;
   final TeamSide initialTeam;
   final String initialKind;
 
@@ -1185,7 +1386,8 @@ class _SetPieceSheetState extends State<_SetPieceSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(l.setPiece, style: Theme.of(context).textTheme.titleMedium),
+            Text(widget.title ?? l.setPiece,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             SegmentedButton<TeamSide>(
               segments: [

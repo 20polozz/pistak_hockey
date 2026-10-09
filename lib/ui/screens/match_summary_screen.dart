@@ -177,6 +177,8 @@ class MatchSummaryScreen extends ConsumerWidget {
           '${cards(TeamSide.away, CardColors.red)}'
         ),
         (l.statTimeouts, '${s.home.timeouts}', '${s.away.timeouts}'),
+        if (s.home.saves + s.away.saves > 0)
+          (l.statSaves, '${s.home.saves}', '${s.away.saves}'),
         if (s.hadShootout)
           (
             l.statShootout,
@@ -355,6 +357,8 @@ class MatchSummaryScreen extends ConsumerWidget {
             row(l.statRed, cards(s, TeamSide.home, CardColors.red),
                 cards(s, TeamSide.away, CardColors.red)),
             row(l.statTimeouts, s.home.timeouts, s.away.timeouts),
+            if (s.home.saves + s.away.saves > 0)
+              row(l.statSaves, s.home.saves, s.away.saves),
             if (s.home.penaltyAttempts + s.away.penaltyAttempts > 0)
               row(
                   l.statPenalties,

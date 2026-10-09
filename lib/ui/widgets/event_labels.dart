@@ -50,6 +50,8 @@ String eventLabel(AppLocalizations l, MatchEvent e) {
           : l.evPenaltyMissed;
     case EventTypes.foul:
       return l.evFoul;
+    case EventTypes.save:
+      return l.evSave;
     case EventTypes.card:
       return switch (e.subtype) {
         CardColors.yellow => l.evCardYellow,
@@ -105,6 +107,8 @@ Color cardColor(String? color) => switch (color) {
       return (teamColor(e.team), Icons.sports_hockey);
     case EventTypes.foul:
       return (teamColor(e.team), Icons.front_hand);
+    case EventTypes.save:
+      return (teamColor(e.team), Icons.shield_outlined);
     case EventTypes.card:
       return (cardColor(e.subtype), Icons.style);
     case EventTypes.timeout:

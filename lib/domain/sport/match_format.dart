@@ -13,9 +13,11 @@ class MatchFormat {
     required this.breakDuration,
     this.timeoutsPerTeamPerPeriod = 1,
     this.timeoutDuration = const Duration(minutes: 1),
+    this.shortTimeoutDuration,
     this.stopClockOnTimeout = true,
     this.exclusionDuration = const Duration(minutes: 2),
     this.foulLimit,
+    this.foulLimitEvery = 5,
     this.overtimePeriods = 0,
     this.overtimeDuration = const Duration(minutes: 5),
     this.allowShootout = false,
@@ -30,6 +32,10 @@ class MatchFormat {
   final int timeoutsPerTeamPerPeriod;
   final Duration timeoutDuration;
 
+  /// Roller hockey: of the timeouts of each period, one is shorter
+  /// (1 min + 30 s). Null = all timeouts last [timeoutDuration].
+  final Duration? shortTimeoutDuration;
+
   /// If true, registering a timeout while the clock runs also pauses it.
   final bool stopClockOnTimeout;
 
@@ -39,6 +45,10 @@ class MatchFormat {
   /// Accumulated team fouls per period that trigger a sanction (e.g. a
   /// direct free hit). Null = no limit shown.
   final int? foulLimit;
+
+  /// After [foulLimit], a new sanction every N more fouls (10, 15, 20…).
+  /// 0 = only at the limit.
+  final int foulLimitEvery;
 
   /// Extra periods available if the match must have a winner (0 = none).
   final int overtimePeriods;
@@ -51,6 +61,35 @@ class MatchFormat {
   /// free hit stops the running clock (in the same action, so undo restores
   /// it). Play restarts with RESUME.
   final bool stopClockOnEvents;
+
+  /// Timeouts each team can take per period (e.g. [1:00, 0:30]).
+  List<Duration> get timeoutSlots {
+    final n = timeoutsPerTeamPerPeriod;
+    if (n <= 0) return const [];
+    final short = shortTimeoutDuration;
+    if (short == null || short == timeoutDuration) {
+      return List.filled(n, timeoutDuration);
+    }
+    return [...List.filled(n - 1, timeoutDuration), short];
+  }
+
+  /// The [n]-th team foul of a period gives a direct free hit.
+  bool isFoulSanction(int n) {
+    final limit = foulLimit;
+    if (limit == null || n < limit) return false;
+    if (foulLimitEvery <= 0) return n == limit;
+    return (n - limit) % foulLimitEvery == 0;
+  }
+
+  /// Next foul count (>= [n]) that gives a direct free hit; null = none.
+  int? nextFoulSanction(int n) {
+    final limit = foulLimit;
+    if (limit == null) return null;
+    if (n <= limit) return limit;
+    if (foulLimitEvery <= 0) return null;
+    final steps = (n - limit + foulLimitEvery - 1) ~/ foulLimitEvery;
+    return limit + steps * foulLimitEvery;
+  }
 
   int get totalPeriods => periods + overtimePeriods;
   Duration get regulationDuration => periodDuration * periods;
@@ -76,10 +115,13 @@ class MatchFormat {
     Duration? breakDuration,
     int? timeoutsPerTeamPerPeriod,
     Duration? timeoutDuration,
+    Duration? shortTimeoutDuration,
+    bool clearShortTimeout = false,
     bool? stopClockOnTimeout,
     Duration? exclusionDuration,
     int? foulLimit,
     bool clearFoulLimit = false,
+    int? foulLimitEvery,
     int? overtimePeriods,
     Duration? overtimeDuration,
     bool? allowShootout,
@@ -94,9 +136,13 @@ class MatchFormat {
         timeoutsPerTeamPerPeriod:
             timeoutsPerTeamPerPeriod ?? this.timeoutsPerTeamPerPeriod,
         timeoutDuration: timeoutDuration ?? this.timeoutDuration,
+        shortTimeoutDuration: clearShortTimeout
+            ? null
+            : (shortTimeoutDuration ?? this.shortTimeoutDuration),
         stopClockOnTimeout: stopClockOnTimeout ?? this.stopClockOnTimeout,
         exclusionDuration: exclusionDuration ?? this.exclusionDuration,
         foulLimit: clearFoulLimit ? null : (foulLimit ?? this.foulLimit),
+        foulLimitEvery: foulLimitEvery ?? this.foulLimitEvery,
         overtimePeriods: overtimePeriods ?? this.overtimePeriods,
         overtimeDuration: overtimeDuration ?? this.overtimeDuration,
         allowShootout: allowShootout ?? this.allowShootout,
@@ -111,9 +157,11 @@ class MatchFormat {
         'breakDurationMs': breakDuration.inMilliseconds,
         'timeoutsPerTeamPerPeriod': timeoutsPerTeamPerPeriod,
         'timeoutDurationMs': timeoutDuration.inMilliseconds,
+        'shortTimeoutDurationMs': shortTimeoutDuration?.inMilliseconds,
         'stopClockOnTimeout': stopClockOnTimeout,
         'exclusionDurationMs': exclusionDuration.inMilliseconds,
         'foulLimit': foulLimit,
+        'foulLimitEvery': foulLimitEvery,
         'overtimePeriods': overtimePeriods,
         'overtimeDurationMs': overtimeDuration.inMilliseconds,
         'allowShootout': allowShootout,
@@ -133,9 +181,14 @@ class MatchFormat {
       timeoutsPerTeamPerPeriod:
           (j['timeoutsPerTeamPerPeriod'] as num?)?.toInt() ?? 1,
       timeoutDuration: ms('timeoutDurationMs', 60000),
+      shortTimeoutDuration: j['shortTimeoutDurationMs'] == null
+          ? null
+          : Duration(
+              milliseconds: (j['shortTimeoutDurationMs'] as num).toInt()),
       stopClockOnTimeout: j['stopClockOnTimeout'] as bool? ?? true,
       exclusionDuration: ms('exclusionDurationMs', 120000),
       foulLimit: (j['foulLimit'] as num?)?.toInt(),
+      foulLimitEvery: (j['foulLimitEvery'] as num?)?.toInt() ?? 5,
       overtimePeriods: (j['overtimePeriods'] as num?)?.toInt() ?? 0,
       overtimeDuration: ms('overtimeDurationMs', 5 * 60000),
       allowShootout: j['allowShootout'] as bool? ?? false,

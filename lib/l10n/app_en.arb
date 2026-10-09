@@ -518,5 +518,32 @@
   "errInvalidEmail": "Invalid email.",
   "errTooManyAttempts": "Too many attempts. Try again in 15 minutes.",
   "errNetwork": "No connection to the server. You can keep using PISTAK offline.",
-  "savedLocally": "Saved on this device"
+  "savedLocally": "Saved on this device",
+  "saveHome": "SAVE HOME",
+  "saveAway": "SAVE AWAY",
+  "evSave": "Save",
+  "statSaves": "Saves",
+  "statsSavesShort": "SV",
+  "whoSaved": "Which goalkeeper?",
+  "timeoutChoose": "Which timeout?",
+  "timeoutUsed": "used",
+  "timeoutNoneLeft": "none left",
+  "timeoutOf": "TIMEOUT · {team}",
+  "@timeoutOf": {
+    "placeholders": {
+      "team": {
+        "type": "String"
+      }
+    }
+  },
+  "freeHitDue": "Direct free hit for {team}",
+  "@freeHitDue": {
+    "placeholders": {
+      "team": {
+        "type": "String"
+      }
+    }
+  },
+  "formatShortTimeoutSeconds": "Short timeout (s, 0 = none)",
+  "formatFoulEvery": "Then every N fouls (0 = once)"
 }

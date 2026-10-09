@@ -80,7 +80,7 @@ class CategoriesScreen extends ConsumerWidget {
   static String _describe(AppLocalizations l, MatchFormat f) =>
       '${l.formatPeriods}: ${f.periods} · ${f.periodDuration.inMinutes} min · '
       '${l.formatBreakMinutes}: ${f.breakDuration.inMinutes} · '
-      '${l.formatTimeoutSeconds}: ${f.timeoutDuration.inSeconds}';
+      '${l.timeoutsShort}: ${f.timeoutSlots.map((d) => d.inSeconds < 60 ? '${d.inSeconds}"' : "${d.inMinutes}'").join(' + ')}';
 
   Future<void> _edit(
       BuildContext context, WidgetRef ref, MatchFormat? existing) async {
@@ -115,6 +115,9 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       TextEditingController(text: '${base.timeoutDuration.inSeconds}');
   late final _toPer =
       TextEditingController(text: '${base.timeoutsPerTeamPerPeriod}');
+  late final _toShort = TextEditingController(
+      text: '${base.shortTimeoutDuration?.inSeconds ?? 0}');
+  late final _foulEvery = TextEditingController(text: '${base.foulLimitEvery}');
   late final _excl =
       TextEditingController(text: '${base.exclusionDuration.inMinutes}');
   late final _foulLimit = TextEditingController(text: '${base.foulLimit ?? 0}');
@@ -165,6 +168,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
             ),
             num(_toSecs, l.formatTimeoutSeconds),
             num(_toPer, l.formatTimeoutsPerPeriod),
+            num(_toShort, l.formatShortTimeoutSeconds),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l.formatStopOnTimeout),
@@ -173,6 +177,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
             ),
             num(_excl, l.formatExclusionMinutes),
             num(_foulLimit, l.formatFoulLimit),
+            num(_foulEvery, l.formatFoulEvery),
             num(_otPeriods, l.formatOvertimePeriods),
             num(_otMinutes, l.formatOvertimeMinutes),
             SwitchListTile(
@@ -217,6 +222,10 @@ class _CategoryDialogState extends State<_CategoryDialog> {
             Duration(seconds: read(_toSecs, base.timeoutDuration.inSeconds, 1)),
         timeoutsPerTeamPerPeriod:
             read(_toPer, base.timeoutsPerTeamPerPeriod, 0),
+        shortTimeoutDuration: read(_toShort, 0, 0) == 0
+            ? null
+            : Duration(seconds: read(_toShort, 0, 0)),
+        foulLimitEvery: read(_foulEvery, base.foulLimitEvery, 0),
         stopClockOnTimeout: _stop,
         exclusionDuration:
             Duration(minutes: read(_excl, base.exclusionDuration.inMinutes, 0)),

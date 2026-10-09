@@ -42,6 +42,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
   final _timeoutSeconds = TextEditingController();
   final _timeoutsPerPeriod = TextEditingController();
   final _foulLimit = TextEditingController();
+  final _shortTimeout = TextEditingController();
+  final _foulEvery = TextEditingController();
   final _otPeriods = TextEditingController();
   bool _shootout = false;
   DateTime? _scheduledAt;
@@ -91,6 +93,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
     _stopOnTimeout = f.stopClockOnTimeout;
     _stopOnEvents = f.stopClockOnEvents;
     _foulLimit.text = '${f.foulLimit ?? 0}';
+    _shortTimeout.text = '${f.shortTimeoutDuration?.inSeconds ?? 0}';
+    _foulEvery.text = '${f.foulLimitEvery}';
     _otPeriods.text = '${f.overtimePeriods}';
     _shootout = f.allowShootout;
   }
@@ -111,6 +115,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
       _timeoutSeconds,
       _timeoutsPerPeriod,
       _foulLimit,
+      _shortTimeout,
+      _foulEvery,
       _otPeriods,
     ]) {
       c.dispose();
@@ -390,6 +396,15 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(
+                    child: _numField(
+                        _shortTimeout, l.formatShortTimeoutSeconds, locked)),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: _numField(_foulEvery, l.formatFoulEvery, locked)),
+              ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
                     child: _numField(_foulLimit, l.formatFoulLimit, locked)),
                 const SizedBox(width: 8),
                 Expanded(
@@ -448,6 +463,8 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
     final toSecs = read(_timeoutSeconds, _format.timeoutDuration.inSeconds, 1);
     final toPer = read(_timeoutsPerPeriod, _format.timeoutsPerTeamPerPeriod, 0);
     final foulLimit = read(_foulLimit, _format.foulLimit ?? 0, 0);
+    final shortTo = read(_shortTimeout, 0, 0);
+    final foulEvery = read(_foulEvery, _format.foulLimitEvery, 0);
     final otPeriods = read(_otPeriods, _format.overtimePeriods, 0);
     return _format.copyWith(
       id: _customId,
@@ -457,6 +474,9 @@ class _MatchDetailsScreenState extends ConsumerState<MatchDetailsScreen> {
       breakDuration: Duration(minutes: breakMin),
       timeoutDuration: Duration(seconds: toSecs),
       timeoutsPerTeamPerPeriod: toPer,
+      shortTimeoutDuration: shortTo == 0 ? null : Duration(seconds: shortTo),
+      clearShortTimeout: shortTo == 0,
+      foulLimitEvery: foulEvery,
       stopClockOnTimeout: _stopOnTimeout,
       stopClockOnEvents: _stopOnEvents,
       foulLimit: foulLimit == 0 ? null : foulLimit,

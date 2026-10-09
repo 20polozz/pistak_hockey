@@ -283,6 +283,8 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
         EventTypes.foul,
         EventTypes.card,
         EventTypes.timeout,
+        EventTypes.save,
+        EventTypes.shot,
       }.contains(e.type);
 
   bool get _isClock => EventTypes.clockTypes.contains(e.type);
