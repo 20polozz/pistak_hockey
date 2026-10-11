@@ -201,7 +201,7 @@ class MatchFormat {
       overtimePeriods: (j['overtimePeriods'] as num?)?.toInt() ?? 0,
       overtimeDuration: ms('overtimeDurationMs', 5 * 60000),
       allowShootout: j['allowShootout'] as bool? ?? false,
-      stopClockOnEvents: j['stopClockOnEvents'] as bool? ?? false,
+      stopClockOnEvents: j['stopClockOnEvents'] as bool? ?? true,
     );
   }
 

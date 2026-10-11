@@ -20,6 +20,7 @@ import '../widgets/voice_recorder_dialog.dart';
 import 'match_details_screen.dart';
 import 'match_summary_screen.dart';
 import 'timeline_screen.dart';
+import '../../domain/match/event_clock.dart';
 
 /// Live recording screen. Priorities: time, period, score, big buttons.
 class MatchScreen extends ConsumerStatefulWidget {
@@ -640,8 +641,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           Expanded(
             child: Text(
               needsTeam
-                  ? '${formatMatchTime(last.matchTime)}  ${eventLabel(l, last)} · ${l.assignTeam}'
-                  : '${formatMatchTime(last.matchTime)}  ${eventLabel(l, last)}'
+                  ? '${formatMatchTime(v.info.format.clockOf(last))}  ${eventLabel(l, last)} · ${l.assignTeam}'
+                  : '${formatMatchTime(v.info.format.clockOf(last))}  ${eventLabel(l, last)}'
                       '${team != null ? ' · ${teamName(l, v.info, team)}' : ''}',
               maxLines: needsTeam ? 2 : 1,
               overflow: TextOverflow.ellipsis,

@@ -8,7 +8,9 @@ import '../../domain/team/team.dart';
 import '../../domain/match/match_event.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers.dart';
+import '../widgets/event_button.dart';
 import '../widgets/event_labels.dart';
+import '../../domain/match/event_clock.dart';
 
 /// Builds the chronological list. Goals show the running score.
 List<Widget> buildTimelineTiles(
@@ -34,6 +36,8 @@ List<Widget> buildTimelineTiles(
         e.metadata[MetaKeys.transcriptStatus] != 'done';
     tiles.add(_TimelineTile(
       event: e,
+      clock: formatMatchTime(v.info.format.clockOf(e)),
+      editable: onTap != null,
       note: pendingTranscript ? l.transcriptPending : null,
       title: eventLabel(l, e),
       team: e.team == null
@@ -90,9 +94,20 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
               constraints: const BoxConstraints(maxWidth: 720),
               child: ListView.separated(
                 padding: const EdgeInsets.all(12),
-                itemCount: tiles.length,
+                itemCount: tiles.length + 1,
                 separatorBuilder: (_, __) => const SizedBox(height: 6),
-                itemBuilder: (_, i) => tiles[i],
+                itemBuilder: (_, i) => i == 0
+                    ? Row(children: [
+                        const Icon(Icons.edit_outlined,
+                            size: 16, color: PistakColors.textMuted),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(l.timelineEditHint,
+                              style: const TextStyle(
+                                  fontSize: 13, color: PistakColors.textMuted)),
+                        ),
+                      ])
+                    : tiles[i - 1],
               ),
             ),
           );
@@ -114,7 +129,9 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
 class _TimelineTile extends StatelessWidget {
   const _TimelineTile({
     required this.event,
+    required this.clock,
     required this.title,
+    this.editable = false,
     this.team,
     this.score,
     this.voidedLabel,
@@ -123,6 +140,8 @@ class _TimelineTile extends StatelessWidget {
   });
 
   final MatchEvent event;
+  final String clock;
+  final bool editable;
   final String title;
   final String? team;
   final String? score;
@@ -152,7 +171,7 @@ class _TimelineTile extends StatelessWidget {
                 SizedBox(
                   width: 56,
                   child: Text(
-                    formatMatchTime(event.matchTime),
+                    clock,
                     style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
@@ -205,6 +224,12 @@ class _TimelineTile extends StatelessWidget {
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
                           fontFeatures: tabularFigures)),
+                if (editable)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8, top: 2),
+                    child: Icon(Icons.edit_outlined,
+                        size: 18, color: PistakColors.textMuted),
+                  ),
               ],
             ),
           ),
@@ -226,8 +251,8 @@ class EventEditSheet extends ConsumerStatefulWidget {
 
 class _EventEditSheetState extends ConsumerState<EventEditSheet> {
   late TeamSide? _team = widget.event.team;
-  late final _time =
-      TextEditingController(text: formatMatchTime(widget.event.matchTime));
+  late final _time = TextEditingController(
+      text: formatMatchTime(widget.view.info.format.clockOf(widget.event)));
   late final _text = TextEditingController(text: widget.event.text ?? '');
   String? _timeError;
   late String? _playerId = e.metadata[MetaKeys.playerId] as String?;
@@ -237,6 +262,8 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
     _ => null,
   };
   late String? _assistName = e.assistName;
+  late String? _cardColor = e.subtype;
+  late String? _shotKind = e.shotKind;
 
   List<TeamMember> _players() {
     final info = widget.view.info;
@@ -248,8 +275,9 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
     if (teamId == null) return const [];
     return (ref.watch(teamMembersProvider(teamId)).valueOrNull ??
             const <TeamMember>[])
-        .where((m) =>
-            m.role == MemberRole.player || m.role == MemberRole.goalkeeper)
+        .where((m) => e.type == EventTypes.save
+            ? m.role == MemberRole.goalkeeper
+            : m.role == MemberRole.player || m.role == MemberRole.goalkeeper)
         .toList();
   }
 
@@ -328,11 +356,48 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
               onSelectionChanged: (s) => setState(() => _team = s.first),
             ),
             const SizedBox(height: 16),
-            _memberPicker(l.player, l.noPlayer, _playerId, (id, name) {
+            if (e.type == EventTypes.card) ...[
+              SegmentedButton<String>(
+                segments: [
+                  for (final c in const [
+                    CardColors.yellow,
+                    CardColors.blue,
+                    CardColors.red
+                  ])
+                    ButtonSegment(
+                      value: c,
+                      icon: MiniCard(color: cardColor(c), height: 18),
+                      label: Text(switch (c) {
+                        CardColors.yellow => l.cardYellow,
+                        CardColors.blue => l.cardBlue,
+                        _ => l.cardRed,
+                      }),
+                    ),
+                ],
+                selected: {_cardColor ?? CardColors.yellow},
+                onSelectionChanged: (s) => setState(() => _cardColor = s.first),
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (_shotKind != null) ...[
+              SegmentedButton<String>(
+                segments: [
+                  ButtonSegment(
+                      value: ShotKinds.penalty, label: Text(l.penalty)),
+                  ButtonSegment(
+                      value: ShotKinds.freeHit, label: Text(l.freeHit)),
+                ],
+                selected: {_shotKind!},
+                onSelectionChanged: (s) => setState(() => _shotKind = s.first),
+              ),
+              const SizedBox(height: 16),
+            ],
+            _memberPicker(e.type == EventTypes.save ? l.whoSaved : l.player,
+                l.noPlayer, _playerId, (id, name) {
               _playerId = id;
               _playerName = name;
             }),
-            if (e.type == EventTypes.goal)
+            if (e.type == EventTypes.goal && e.shotKind == null)
               _memberPicker(l.assist, l.noAssist, _assistId, (id, name) {
                 _assistId = id;
                 _assistName = name;
@@ -343,7 +408,7 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
               controller: _time,
               keyboardType: TextInputType.datetime,
               decoration: InputDecoration(
-                  labelText: l.matchTimeField, errorText: _timeError),
+                  labelText: l.eventClockField, errorText: _timeError),
             ),
             const SizedBox(height: 16),
           ],
@@ -387,8 +452,10 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
   }
 
   Future<void> _save(AppLocalizations l) async {
-    final time = parseMatchTime(_time.text);
-    if (time == null) {
+    final clock = parseMatchTime(_time.text);
+    final f = widget.view.info.format;
+    final p = e.period < 1 ? 1 : e.period;
+    if (clock == null || clock > f.durationOf(p)) {
       setState(() => _timeError = l.invalidTime);
       return;
     }
@@ -400,7 +467,10 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
       meta[MetaKeys.playerId] = _playerId;
       meta[MetaKeys.playerName] = _playerName;
     }
-    if (e.type == EventTypes.goal && _players().isNotEmpty) {
+    if (_shotKind != null) meta[MetaKeys.shotKind] = _shotKind;
+    if (e.type == EventTypes.goal &&
+        e.shotKind == null &&
+        _players().isNotEmpty) {
       meta[MetaKeys.assistId] = _assistId ?? '';
       if (_assistName == null) {
         meta.remove(MetaKeys.assistName);
@@ -408,7 +478,7 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
         meta[MetaKeys.assistName] = _assistName;
       }
     }
-    var subtype = e.subtype;
+    var subtype = e.type == EventTypes.card ? _cardColor : e.subtype;
     if (e.type == EventTypes.incident) {
       final t = _text.text.trim();
       if (t.isEmpty) {
@@ -418,11 +488,10 @@ class _EventEditSheetState extends ConsumerState<EventEditSheet> {
         if (subtype == IncidentKinds.unjustified) subtype = IncidentKinds.text;
       }
     }
-    // Keep periodTime consistent with the edited match time.
-    final periodStart = e.period > 0
-        ? widget.view.info.format.startOf(e.period)
-        : Duration.zero;
-    final periodTime = time - periodStart;
+    // The field shows the clock (time left); store elapsed times.
+    final periodTime = f.periodTimeForClock(p, clock);
+    final time =
+        (e.period > 0 ? f.startOf(e.period) : Duration.zero) + periodTime;
     final updated = e.copyWith(
       team: _team,
       clearTeam: _team == null,

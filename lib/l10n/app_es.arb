@@ -335,5 +335,7 @@
   "freeHitDue": "Falta directa para {team}",
   "formatShortTimeoutSeconds": "Tiempo muerto corto (s, 0 = ninguno)",
   "adjustClockRemainingHint": "Tiempo que queda de la parte (mm:ss)",
+  "eventClockField": "Tiempo del marcador (mm:ss)",
+  "timelineEditHint": "Toca una acción para corregirla (equipo, jugador, tiempo…) o borrarla.",
   "formatFoulEvery": "Después, cada N faltas (0 = una vez)"
 }

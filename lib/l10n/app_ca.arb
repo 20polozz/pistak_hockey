@@ -335,5 +335,7 @@
   "freeHitDue": "Falta directa per a {team}",
   "formatShortTimeoutSeconds": "Temps mort curt (s, 0 = cap)",
   "adjustClockRemainingHint": "Temps que queda de la part (mm:ss)",
+  "eventClockField": "Temps del marcador (mm:ss)",
+  "timelineEditHint": "Toca una acció per corregir-la (equip, jugador, temps…) o esborrar-la.",
   "formatFoulEvery": "Després, cada N faltes (0 = un cop)"
 }

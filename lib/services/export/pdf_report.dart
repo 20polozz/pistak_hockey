@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../../core/time_format.dart';
 import '../../domain/match/match_event.dart';
 import '../../domain/report/match_report.dart';
+import '../../domain/match/event_clock.dart';
 
 /// Localized texts for the PDF (built from AppLocalizations in the UI, so
 /// this file stays free of Flutter and is unit-testable).
@@ -194,7 +195,8 @@ class PdfReportExporter {
               pw.Padding(
                 padding: const pw.EdgeInsets.only(bottom: 4),
                 child: pw.Text(
-                    safe('${formatMatchTime(x.event.matchTime)}  '
+                    safe(
+                        '${formatMatchTime(report.info.format.clockOf(x.event))}  '
                         '${x.event.text ?? l.eventLabel(x.event)}'),
                     style: const pw.TextStyle(fontSize: 10)),
               ),
@@ -206,7 +208,7 @@ class PdfReportExporter {
           data: [
             for (final x in report.lines)
               [
-                formatMatchTime(x.event.matchTime),
+                formatMatchTime(report.info.format.clockOf(x.event)),
                 formatClockTime(x.event.timestamp),
                 safe([
                   l.eventLabel(x.event),

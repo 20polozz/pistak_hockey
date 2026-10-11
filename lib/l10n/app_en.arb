@@ -546,5 +546,7 @@
   },
   "formatShortTimeoutSeconds": "Short timeout (s, 0 = none)",
   "adjustClockRemainingHint": "Time left in this period (mm:ss)",
+  "eventClockField": "Clock time (as on the scoreboard, mm:ss)",
+  "timelineEditHint": "Tap an action to fix it (team, player, time…) or delete it.",
   "formatFoulEvery": "Then every N fouls (0 = once)"
 }

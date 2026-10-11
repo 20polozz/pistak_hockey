@@ -362,6 +362,8 @@ S = {
 'freeHitDue': ('Direct free hit for {team}', 'Falta directa per a {team}', 'Falta directa para {team}'),
 'formatShortTimeoutSeconds': ('Short timeout (s, 0 = none)', 'Temps mort curt (s, 0 = cap)', 'Tiempo muerto corto (s, 0 = ninguno)'),
 'adjustClockRemainingHint': ('Time left in this period (mm:ss)', 'Temps que queda de la part (mm:ss)', 'Tiempo que queda de la parte (mm:ss)'),
+'eventClockField': ('Clock time (as on the scoreboard, mm:ss)', 'Temps del marcador (mm:ss)', 'Tiempo del marcador (mm:ss)'),
+'timelineEditHint': ('Tap an action to fix it (team, player, time…) or delete it.', 'Toca una acció per corregir-la (equip, jugador, temps…) o esborrar-la.', 'Toca una acción para corregirla (equipo, jugador, tiempo…) o borrarla.'),
 'formatFoulEvery': ('Then every N fouls (0 = once)', 'Després, cada N faltes (0 = un cop)', 'Después, cada N faltas (0 = una vez)'),
 }
 

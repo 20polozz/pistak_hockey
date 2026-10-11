@@ -17,6 +17,7 @@ import '../providers.dart';
 import '../widgets/event_labels.dart';
 import 'match_details_screen.dart';
 import 'timeline_screen.dart';
+import '../../domain/match/event_clock.dart';
 
 /// Basic report view (Phase 1). PDF/CSV/JSON export arrive in Phase 3 and
 /// will be generated from this same data (MatchView).
@@ -80,7 +81,7 @@ class MatchSummaryScreen extends ConsumerWidget {
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 4),
                             child: Text(
-                                '${formatMatchTime(e.matchTime)} · ${e.text ?? eventLabel(l, e)}'),
+                                '${formatMatchTime(v.info.format.clockOf(e))} · ${e.text ?? eventLabel(l, e)}'),
                           ),
                       ],
                     ),
@@ -92,7 +93,15 @@ class MatchSummaryScreen extends ConsumerWidget {
                   l.timeline,
                   Column(
                     children: [
-                      for (final t in buildTimelineTiles(context, v))
+                      // Tap an action to fix it (team, player, time…).
+                      for (final t in buildTimelineTiles(context, v,
+                          onTap: (e) => showModalBottomSheet<void>(
+                                context: context,
+                                isScrollControlled: true,
+                                showDragHandle: true,
+                                builder: (_) =>
+                                    EventEditSheet(event: e, view: v),
+                              )))
                         Padding(
                             padding: const EdgeInsets.only(bottom: 6),
                             child: t),
